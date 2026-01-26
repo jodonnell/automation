@@ -1,0 +1,30 @@
+{
+  "name": "noname",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest run",
+    "prettier": "prettier -w src/**/*.ts *.ts test/**/*.ts",
+    "lint": "eslint src/**/*.ts test/**/*.ts main.ts vite.config.ts",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "scripts/deploy.sh"
+  },
+  "type": "module",
+  "author": "Jacob",
+  "license": "ISC",
+  "dependencies": {
+    "pixi.js": "^8.14.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "eslint": "^9.39.1",
+    "prettier": "^3.7.2",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.18.2",
+    "vite": "^7.2.4",
+    "vitest": "^4.0.14"
+  }
+}
