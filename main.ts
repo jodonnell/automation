@@ -1,4 +1,4 @@
 import "./style.css"
-import { test } from "./src/scene"
+import { init } from "./src/scene"
 
-test()
+init()

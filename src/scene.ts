@@ -4,16 +4,16 @@ import {
   ZOOM_IN_DURATION,
   ZOOM_OUT_DURATION,
 } from "./constants"
-import { easeInOutCubic } from "./easing"
+import { createCameraController } from "./cameraController"
 import { createNode } from "./node"
+import { createNodeManager } from "./nodeManager"
 import {
   centerBoundsAtScale,
   computeOuterAlpha,
   focusBounds,
-  lerpCameraTransform,
   worldBoundsToLocal,
 } from "./sceneMath"
-import type { Bounds, BoxContainer, NodeContainer, Tween } from "./types"
+import type { Bounds, BoxContainer, NodeContainer } from "./types"
 
 export const test = async (): Promise<void> => {
   const app = new Application()
@@ -28,24 +28,13 @@ export const test = async (): Promise<void> => {
   app.stage.addChild(camera)
 
   const getNodeSize = () => Math.min(app.renderer.width, app.renderer.height)
+  const getViewSize = () => ({
+    width: app.renderer.width,
+    height: app.renderer.height,
+  })
 
-  const positionNode = (node: NodeContainer) => {
-    const x = (app.renderer.width - node.nodeSize) / 2
-    const y = (app.renderer.height - node.nodeSize) / 2
-    node.position.set(x, y)
-  }
-
-  let currentNode = createNode(getNodeSize())
-  positionNode(currentNode)
-  camera.addChild(currentNode)
-
-  const nodeStack: NodeContainer[] = []
-  let activeTween: Tween | null = null
-
-  const setCameraTransform = (x: number, y: number, scale: number) => {
-    camera.position.set(x, y)
-    camera.scale.set(scale)
-  }
+  const nodeManager = createNodeManager(camera, getNodeSize, getViewSize)
+  const cameraController = createCameraController(camera)
 
   const getCenteredTransform = (bounds: Bounds, scale: number) =>
     centerBoundsAtScale(bounds, app.renderer.width, app.renderer.height, scale)
@@ -53,36 +42,17 @@ export const test = async (): Promise<void> => {
   const getFocusedTransform = (bounds: Bounds) =>
     focusBounds(bounds, app.renderer.width, app.renderer.height)
 
-  const startTween = (
-    to: { x: number; y: number; scale: number },
-    duration: number,
-    onComplete?: () => void,
-    onUpdate?: (eased: number) => void,
-  ) => {
-    activeTween = {
-      start: performance.now(),
-      duration,
-      from: {
-        x: camera.position.x,
-        y: camera.position.y,
-        scale: camera.scale.x,
-      },
-      to,
-      onComplete,
-      onUpdate,
-    }
-  }
-
-  const resetCamera = () => {
-    setCameraTransform(0, 0, 1)
-  }
+  const worldBoundsToCameraLocal = (bounds: Bounds) =>
+    worldBoundsToLocal(bounds, (x, y) =>
+      camera.worldTransform.applyInverse(new Point(x, y)),
+    )
 
   const bindBoxHandlers = (node: NodeContainer) => {
     node.children.forEach((child) => {
       const box = child as BoxContainer
       box.removeAllListeners("pointerdown")
       box.on("pointerdown", (event) => {
-        if (event.button !== 0 || activeTween) return
+        if (event.button !== 0 || cameraController.isTweening) return
         const now = performance.now()
         if (lastClickTarget === box && now - lastClickTime < DOUBLE_CLICK_MS) {
           lastClickTime = 0
@@ -95,11 +65,6 @@ export const test = async (): Promise<void> => {
       })
     })
   }
-
-  const worldBoundsToCameraLocal = (bounds: Bounds) =>
-    worldBoundsToLocal(bounds, (x, y) =>
-      camera.worldTransform.applyInverse(new Point(x, y)),
-    )
 
   const handleDoubleClickBox = (box: BoxContainer) => {
     const nextNode = createNode(getNodeSize())
@@ -126,26 +91,26 @@ export const test = async (): Promise<void> => {
     camera.addChild(nextNode)
 
     const fadeOuterLayer = (eased: number) => {
-      currentNode.alpha = computeOuterAlpha(eased, 0, 0.5)
+      nodeManager.current.alpha = computeOuterAlpha(eased, 0, 0.5)
     }
 
-    startTween(
+    cameraController.startTween(
       target,
       ZOOM_IN_DURATION,
       () => {
-        const previous = currentNode
-        nodeStack.push(previous)
+        const previous = nodeManager.current
+        nodeManager.push()
 
         camera.removeChild(previous)
         camera.removeChild(mask)
         nextNode.mask = null
-        currentNode = nextNode
-        currentNode.scale.set(1)
-        positionNode(currentNode)
-        currentNode.alpha = 1
+        nodeManager.current = nextNode
+        nodeManager.current.scale.set(1)
+        nodeManager.positionCurrent()
+        nodeManager.current.alpha = 1
 
-        resetCamera()
-        bindBoxHandlers(currentNode)
+        cameraController.reset()
+        bindBoxHandlers(nodeManager.current)
       },
       fadeOuterLayer,
     )
@@ -155,54 +120,37 @@ export const test = async (): Promise<void> => {
   let lastClickTarget: BoxContainer | null = null
   let lastRightClickTime = 0
 
-  bindBoxHandlers(currentNode)
+  bindBoxHandlers(nodeManager.current)
 
   app.stage.eventMode = "static"
   app.stage.hitArea = app.screen
   app.stage.on("pointerdown", (event) => {
-    if (event.button !== 2 || activeTween) return
+    if (event.button !== 2 || cameraController.isTweening) return
     const now = performance.now()
     if (now - lastRightClickTime < DOUBLE_CLICK_MS) {
       lastRightClickTime = 0
-      const previous = nodeStack.pop()
+      const previous = nodeManager.pop()
       if (!previous) return
 
-      const bounds = currentNode.getBounds()
+      const bounds = nodeManager.current.getBounds()
       const target = getCenteredTransform(bounds, 0.6)
 
-      startTween(target, ZOOM_OUT_DURATION, () => {
+      cameraController.startTween(target, ZOOM_OUT_DURATION, () => {
         camera.removeChildren()
-        currentNode = previous
-        camera.addChild(currentNode)
-        positionNode(currentNode)
-        resetCamera()
-        bindBoxHandlers(currentNode)
+        nodeManager.current = previous
+        camera.addChild(nodeManager.current)
+        nodeManager.positionCurrent()
+        cameraController.reset()
+        bindBoxHandlers(nodeManager.current)
       })
       return
     }
     lastRightClickTime = now
   })
 
-  app.ticker.add(() => {
-    if (!activeTween) return
-    const now = performance.now()
-    const t = Math.min(1, (now - activeTween.start) / activeTween.duration)
-    const eased = easeInOutCubic(t)
-    const { x, y, scale } = lerpCameraTransform(
-      activeTween.from,
-      activeTween.to,
-      eased,
-    )
-    setCameraTransform(x, y, scale)
-    activeTween.onUpdate?.(eased)
-    if (t >= 1) {
-      const done = activeTween.onComplete
-      activeTween = null
-      done?.()
-    }
-  })
+  app.ticker.add(cameraController.tick)
 
   window.addEventListener("resize", () => {
-    positionNode(currentNode)
+    nodeManager.positionCurrent()
   })
 }
