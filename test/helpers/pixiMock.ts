@@ -12,7 +12,7 @@ export const createPixiMock = () => {
   }
 
   class Container {
-    children: any[] = []
+    children: unknown[] = []
     position = {
       x: 0,
       y: 0,
@@ -32,9 +32,10 @@ export const createPixiMock = () => {
     alpha = 1
     eventMode?: string
     cursor?: string
-    hitArea?: any
-    mask?: any
-    _listeners: Record<string, (event: any) => void> = {}
+    hitArea?: unknown
+    mask?: unknown
+    _bounds?: { x: number; y: number; width: number; height: number }
+    _listeners: Record<string, (event: unknown) => void> = {}
     worldTransform = {
       applyInverse: (point: Point) => new Point(point.x, point.y),
     }
@@ -44,7 +45,7 @@ export const createPixiMock = () => {
       return child
     }
 
-    removeChild(child: any): void {
+    removeChild(child: unknown): void {
       this.children = this.children.filter((item) => item !== child)
     }
 
@@ -52,7 +53,7 @@ export const createPixiMock = () => {
       this.children = []
     }
 
-    on(event: string, handler: (event: any) => void): this {
+    on(event: string, handler: (event: unknown) => void): this {
       this._listeners[event] = handler
       return this
     }
@@ -66,15 +67,27 @@ export const createPixiMock = () => {
     }
 
     getBounds(): { x: number; y: number; width: number; height: number } {
-      if ((this as any)._bounds) return (this as any)._bounds
+      if (this._bounds) return this._bounds
       return { x: this.position.x, y: this.position.y, width: 10, height: 10 }
     }
   }
 
   class Graphics extends Container {
-    rect(_x: number, _y: number, _width: number, _height: number): void {}
-    stroke(_style: any): void {}
-    fill(_style: any): void {}
+    lastRect?: { x: number; y: number; width: number; height: number }
+    lastStroke?: unknown
+    lastFill?: unknown
+
+    rect(x: number, y: number, width: number, height: number): void {
+      this.lastRect = { x, y, width, height }
+    }
+
+    stroke(style: unknown): void {
+      this.lastStroke = style
+    }
+
+    fill(style: unknown): void {
+      this.lastFill = style
+    }
   }
 
   class Rectangle {
@@ -93,7 +106,7 @@ export const createPixiMock = () => {
 
   class Text extends Container {
     text: string
-    style: any
+    style: Record<string, unknown>
     anchor = {
       x: 0,
       y: 0,
@@ -103,7 +116,13 @@ export const createPixiMock = () => {
       },
     }
 
-    constructor({ text, style }: { text: string; style: any }) {
+    constructor({
+      text,
+      style,
+    }: {
+      text: string
+      style: Record<string, unknown>
+    }) {
       super()
       this.text = text
       this.style = style
@@ -117,12 +136,15 @@ export const createPixiMock = () => {
     stage = new Container()
     screen = new Rectangle(0, 0, 800, 600)
     ticker = { add: vi.fn() }
+    initOptions?: Record<string, unknown>
 
     constructor() {
       Application.lastInstance = this
     }
 
-    async init(_options: any): Promise<void> {}
+    async init(options: Record<string, unknown>): Promise<void> {
+      this.initOptions = options
+    }
   }
 
   return {
