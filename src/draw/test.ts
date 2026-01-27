@@ -54,11 +54,43 @@ const createNode = (size: number): NodeContainer => {
 
   const gap = size * 0.08
   const boxSize = (size - gap * 4) / 3
-  const y = (size - boxSize) / 2
+  const padding = gap
+  const min = padding
+  const max = size - padding - boxSize
+
+  const placed: { x: number; y: number }[] = []
+  const overlaps = (x: number, y: number) =>
+    placed.some((p) => {
+      return (
+        x < p.x + boxSize &&
+        x + boxSize > p.x &&
+        y < p.y + boxSize &&
+        y + boxSize > p.y
+      )
+    })
+
+  const pickSpot = () => {
+    const maxAttempts = 200
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const x = min + Math.random() * (max - min)
+      const y = min + Math.random() * (max - min)
+      if (!overlaps(x, y)) return { x, y }
+    }
+    return null
+  }
 
   LETTERS.forEach((label, index) => {
     const box = createBox(boxSize, label)
-    box.position.set(gap + index * (boxSize + gap), y)
+    const spot = pickSpot()
+    if (spot) {
+      placed.push(spot)
+      box.position.set(spot.x, spot.y)
+    } else {
+      const fallbackX = gap + index * (boxSize + gap)
+      const fallbackY = (size - boxSize) / 2
+      placed.push({ x: fallbackX, y: fallbackY })
+      box.position.set(fallbackX, fallbackY)
+    }
     node.addChild(box)
   })
 
