@@ -1,10 +1,15 @@
 import { Container, Graphics, Rectangle, Text } from "pixi.js"
-import { LETTERS } from "./constants"
-import type { BoxContainer, NodeContainer } from "./types"
+import type { BoxContainer, NodeContainer, NodeSpec } from "./types"
 
-const createBox = (size: number, label: string): BoxContainer => {
+const createBox = (
+  size: number,
+  label: string,
+  nodeId: string,
+  hasChildren: boolean,
+): BoxContainer => {
   const box = new Container() as BoxContainer
   box.boxSize = size
+  box.name = nodeId
 
   const shape = new Graphics()
   shape.rect(0, 0, size, size)
@@ -24,13 +29,19 @@ const createBox = (size: number, label: string): BoxContainer => {
   box.addChild(text)
 
   box.eventMode = "static"
-  box.cursor = "pointer"
+  box.cursor = hasChildren ? "pointer" : "default"
   box.hitArea = new Rectangle(0, 0, size, size)
 
   return box
 }
 
-export const createNode = (width: number, height: number): NodeContainer => {
+const getChildren = (spec: NodeSpec) => spec.children ?? []
+
+export const createNode = (
+  spec: NodeSpec,
+  width: number,
+  height: number,
+): NodeContainer => {
   const node = new Container() as NodeContainer
   node.nodeWidth = width
   node.nodeHeight = height
@@ -65,8 +76,14 @@ export const createNode = (width: number, height: number): NodeContainer => {
     return null
   }
 
-  LETTERS.forEach((label, index) => {
-    const box = createBox(boxSize, label)
+  const children = getChildren(spec)
+  children.forEach((child, index) => {
+    const box = createBox(
+      boxSize,
+      child.label,
+      child.id,
+      getChildren(child).length > 0,
+    )
     const spot = pickSpot()
     if (spot) {
       placed.push(spot)

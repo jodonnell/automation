@@ -1,13 +1,22 @@
 import type { Container } from "pixi.js"
 
 export type BoxContainer = Container & { boxSize: number }
-export type NodeContainer = Container & { nodeWidth: number; nodeHeight: number }
+export type NodeContainer = Container & {
+  nodeWidth: number
+  nodeHeight: number
+}
 
 export type Bounds = {
   x: number
   y: number
   width: number
   height: number
+}
+
+export type NodeSpec = {
+  id: string
+  label: string
+  children?: NodeSpec[]
 }
 
 export type Tween = {

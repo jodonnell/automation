@@ -1,6 +1,6 @@
 import type { Container } from "pixi.js"
 import { createNode } from "./node"
-import type { NodeContainer } from "./types"
+import type { NodeContainer, NodeSpec } from "./types"
 
 export type NodeManager = {
   current: NodeContainer
@@ -13,6 +13,7 @@ export const createNodeManager = (
   camera: Container,
   getNodeSize: () => { width: number; height: number },
   getViewSize: () => { width: number; height: number },
+  rootSpec: NodeSpec,
 ): NodeManager => {
   const positionNode = (node: NodeContainer) => {
     const { width, height } = getViewSize()
@@ -22,7 +23,7 @@ export const createNodeManager = (
   }
 
   const initialSize = getNodeSize()
-  let currentNode = createNode(initialSize.width, initialSize.height)
+  let currentNode = createNode(rootSpec, initialSize.width, initialSize.height)
   positionNode(currentNode)
   camera.addChild(currentNode)
 

@@ -1,9 +1,13 @@
 import { Graphics } from "pixi.js"
-import { DOUBLE_CLICK_MS, ZOOM_IN_DURATION, ZOOM_OUT_DURATION } from "./constants"
+import {
+  DOUBLE_CLICK_MS,
+  ZOOM_IN_DURATION,
+  ZOOM_OUT_DURATION,
+} from "./constants"
 import { createNode } from "./node"
 import { computeOuterAlpha } from "./sceneMath"
 import type { NodeManager } from "./nodeManager"
-import type { Bounds, BoxContainer, NodeContainer } from "./types"
+import type { Bounds, BoxContainer, NodeContainer, NodeSpec } from "./types"
 
 type CameraController = {
   readonly isTweening: boolean
@@ -24,14 +28,26 @@ type InteractionDeps = {
     position: { x: number; y: number }
     scale: { x: number; y: number }
   }
-  stage: { eventMode?: string; hitArea?: unknown; on: (event: string, handler: (event: unknown) => void) => void }
+  stage: {
+    eventMode?: string
+    hitArea?: unknown
+    on: (event: string, handler: (event: unknown) => void) => void
+  }
   screen: unknown
   nodeManager: NodeManager
   cameraController: CameraController
   getNodeSize: () => { width: number; height: number }
-  getCenteredTransform: (bounds: Bounds, scale: number) => { x: number; y: number; scale: number }
-  getFocusedTransform: (bounds: Bounds) => { x: number; y: number; scale: number }
+  getCenteredTransform: (
+    bounds: Bounds,
+    scale: number,
+  ) => { x: number; y: number; scale: number }
+  getFocusedTransform: (bounds: Bounds) => {
+    x: number
+    y: number
+    scale: number
+  }
   worldBoundsToCameraLocal: (bounds: Bounds) => Bounds
+  resolveSpecForBox: (box: BoxContainer) => NodeSpec | null
 }
 
 export const setupInteractions = ({
@@ -44,14 +60,18 @@ export const setupInteractions = ({
   getCenteredTransform,
   getFocusedTransform,
   worldBoundsToCameraLocal,
+  resolveSpecForBox,
 }: InteractionDeps) => {
   const bindBoxHandlers = (node: NodeContainer) => {
     node.children.forEach((child) => {
       const box = child as BoxContainer
       box.removeAllListeners("pointerdown")
+      const spec = resolveSpecForBox(box)
+      const isZoomable = Boolean(spec?.children && spec.children.length > 0)
+      box.cursor = isZoomable ? "pointer" : "default"
       box.on("pointerdown", (event) => {
         const button = (event as { button?: number }).button
-        if (button !== 0 || cameraController.isTweening) return
+        if (button !== 0 || cameraController.isTweening || !isZoomable) return
         const now = performance.now()
         if (lastClickTarget === box && now - lastClickTime < DOUBLE_CLICK_MS) {
           lastClickTime = 0
@@ -66,8 +86,10 @@ export const setupInteractions = ({
   }
 
   const handleDoubleClickBox = (box: BoxContainer) => {
+    const spec = resolveSpecForBox(box)
+    if (!spec || !spec.children || spec.children.length === 0) return
     const nextSize = getNodeSize()
-    const nextNode = createNode(nextSize.width, nextSize.height)
+    const nextNode = createNode(spec, nextSize.width, nextSize.height)
     nextNode.alpha = 1
 
     const bounds = box.getBounds()
@@ -82,7 +104,12 @@ export const setupInteractions = ({
     nextNode.position.set(localBounds.x, localBounds.y)
 
     const mask = new Graphics()
-    mask.rect(localBounds.x, localBounds.y, localBounds.width, localBounds.height)
+    mask.rect(
+      localBounds.x,
+      localBounds.y,
+      localBounds.width,
+      localBounds.height,
+    )
     mask.fill(0xffffff)
     camera.addChild(mask)
     nextNode.mask = mask

@@ -4,6 +4,7 @@ import { createPixiMock } from "./helpers/pixiMock"
 vi.mock("pixi.js", () => createPixiMock())
 
 import { createNode } from "../src/node"
+import type { NodeSpec } from "../src/types"
 
 const nonOverlapping = (a: { x: number; y: number; size: number }, b: { x: number; y: number; size: number }) => {
   return !(
@@ -30,7 +31,16 @@ describe("createNode", () => {
 
     const width = 400
     const height = 300
-    const node = createNode(width, height)
+    const spec: NodeSpec = {
+      id: "root",
+      label: "",
+      children: [
+        { id: "a", label: "A" },
+        { id: "b", label: "B" },
+        { id: "c", label: "C" },
+      ],
+    }
+    const node = createNode(spec, width, height)
     expect(node.children.length).toBe(3)
 
     const base = Math.min(width, height)

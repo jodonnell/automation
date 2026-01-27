@@ -4,7 +4,7 @@ import { createPixiMock } from "./helpers/pixiMock"
 vi.mock("pixi.js", () => createPixiMock())
 
 import { Application } from "pixi.js"
-import { test as runScene } from "../src/scene"
+import { init as runScene } from "../src/scene"
 
 describe("scene", () => {
   it("initializes the app and binds basic handlers", async () => {

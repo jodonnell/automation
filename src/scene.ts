@@ -2,12 +2,13 @@ import { Application, Container, Point } from "pixi.js"
 import { createCameraController } from "./cameraController"
 import { setupInteractions } from "./interactions"
 import { createNodeManager } from "./nodeManager"
+import { NODE_TREE } from "./nodeSpec"
 import {
   centerBoundsAtScale,
   focusBounds,
   worldBoundsToLocal,
 } from "./sceneMath"
-import type { Bounds } from "./types"
+import type { Bounds, NodeSpec } from "./types"
 
 export const init = async (): Promise<void> => {
   const app = new Application()
@@ -30,8 +31,20 @@ export const init = async (): Promise<void> => {
     height: app.renderer.height,
   })
 
-  const nodeManager = createNodeManager(camera, getNodeSize, getViewSize)
+  const nodeManager = createNodeManager(
+    camera,
+    getNodeSize,
+    getViewSize,
+    NODE_TREE,
+  )
   const cameraController = createCameraController(camera)
+
+  const nodeSpecIndex = new Map<string, NodeSpec>()
+  const indexSpecs = (spec: NodeSpec) => {
+    nodeSpecIndex.set(spec.id, spec)
+    spec.children?.forEach(indexSpecs)
+  }
+  indexSpecs(NODE_TREE)
 
   const getCenteredTransform = (bounds: Bounds, scale: number) =>
     centerBoundsAtScale(bounds, app.renderer.width, app.renderer.height, scale)
@@ -54,6 +67,7 @@ export const init = async (): Promise<void> => {
     getCenteredTransform,
     getFocusedTransform,
     worldBoundsToCameraLocal,
+    resolveSpecForBox: (box) => nodeSpecIndex.get(box.name ?? "") ?? null,
   })
 
   app.ticker.add(cameraController.tick)
