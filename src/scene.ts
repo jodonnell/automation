@@ -1,101 +1,8 @@
-import { Application, Container, Graphics, Point, Rectangle, Text } from "pixi.js"
-
-type BoxContainer = Container & { boxSize: number }
-type NodeContainer = Container & { nodeSize: number }
-
-type Tween = {
-  start: number
-  duration: number
-  from: { x: number; y: number; scale: number }
-  to: { x: number; y: number; scale: number }
-  onUpdate?: (eased: number) => void
-  onComplete?: () => void
-}
-
-const LETTERS = ["C", "A", "A"]
-const DOUBLE_CLICK_MS = 350
-const ZOOM_IN_DURATION = 480
-const ZOOM_OUT_DURATION = 360
-
-const easeInOutCubic = (t: number): number =>
-  t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
-
-const createBox = (size: number, label: string): BoxContainer => {
-  const box = new Container() as BoxContainer
-  box.boxSize = size
-
-  const shape = new Graphics()
-  shape.rect(0, 0, size, size)
-  shape.stroke({ width: 3, color: 0x111111 })
-  box.addChild(shape)
-
-  const text = new Text({
-    text: label,
-    style: {
-      fontFamily: "Georgia, serif",
-      fontSize: Math.max(28, Math.floor(size * 0.4)),
-      fill: 0x111111,
-    },
-  })
-  text.anchor.set(0.5)
-  text.position.set(size / 2, size / 2)
-  box.addChild(text)
-
-  box.eventMode = "static"
-  box.cursor = "pointer"
-  box.hitArea = new Rectangle(0, 0, size, size)
-
-  return box
-}
-
-const createNode = (size: number): NodeContainer => {
-  const node = new Container() as NodeContainer
-  node.nodeSize = size
-
-  const gap = size * 0.08
-  const boxSize = (size - gap * 4) / 3
-  const padding = gap
-  const min = padding
-  const max = size - padding - boxSize
-
-  const placed: { x: number; y: number }[] = []
-  const overlaps = (x: number, y: number) =>
-    placed.some((p) => {
-      return (
-        x < p.x + boxSize &&
-        x + boxSize > p.x &&
-        y < p.y + boxSize &&
-        y + boxSize > p.y
-      )
-    })
-
-  const pickSpot = () => {
-    const maxAttempts = 200
-    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      const x = min + Math.random() * (max - min)
-      const y = min + Math.random() * (max - min)
-      if (!overlaps(x, y)) return { x, y }
-    }
-    return null
-  }
-
-  LETTERS.forEach((label, index) => {
-    const box = createBox(boxSize, label)
-    const spot = pickSpot()
-    if (spot) {
-      placed.push(spot)
-      box.position.set(spot.x, spot.y)
-    } else {
-      const fallbackX = gap + index * (boxSize + gap)
-      const fallbackY = (size - boxSize) / 2
-      placed.push({ x: fallbackX, y: fallbackY })
-      box.position.set(fallbackX, fallbackY)
-    }
-    node.addChild(box)
-  })
-
-  return node
-}
+import { Application, Container, Graphics, Point } from "pixi.js"
+import { DOUBLE_CLICK_MS, ZOOM_IN_DURATION, ZOOM_OUT_DURATION } from "./constants"
+import { easeInOutCubic } from "./easing"
+import { createNode } from "./node"
+import type { Bounds, BoxContainer, NodeContainer, Tween } from "./types"
 
 export const test = async (): Promise<void> => {
   const app = new Application()
@@ -129,12 +36,7 @@ export const test = async (): Promise<void> => {
     camera.scale.set(scale)
   }
 
-  const centerBoundsAtScale = (bounds: {
-    x: number
-    y: number
-    width: number
-    height: number
-  }, scale: number) => {
+  const centerBoundsAtScale = (bounds: Bounds, scale: number) => {
     const viewWidth = app.renderer.width
     const viewHeight = app.renderer.height
     const centerX = bounds.x + bounds.width / 2
@@ -146,12 +48,7 @@ export const test = async (): Promise<void> => {
     }
   }
 
-  const focusBounds = (bounds: {
-    x: number
-    y: number
-    width: number
-    height: number
-  }) => {
+  const focusBounds = (bounds: Bounds) => {
     const viewWidth = app.renderer.width
     const viewHeight = app.renderer.height
     const scale = Math.min(viewWidth / bounds.width, viewHeight / bounds.height)
@@ -197,12 +94,7 @@ export const test = async (): Promise<void> => {
     })
   }
 
-  const worldBoundsToCameraLocal = (bounds: {
-    x: number
-    y: number
-    width: number
-    height: number
-  }) => {
+  const worldBoundsToCameraLocal = (bounds: Bounds) => {
     const topLeft = camera.worldTransform.applyInverse(new Point(bounds.x, bounds.y))
     const bottomRight = camera.worldTransform.applyInverse(
       new Point(bounds.x + bounds.width, bounds.y + bounds.height),

@@ -1,4 +1,4 @@
 import "./style.css"
-import { test } from "./src/draw/test"
+import { test } from "./src/scene"
 
 test()
