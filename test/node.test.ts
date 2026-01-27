@@ -28,14 +28,18 @@ describe("createNode", () => {
       return value
     })
 
-    const size = 300
-    const node = createNode(size)
+    const width = 400
+    const height = 300
+    const node = createNode(width, height)
     expect(node.children.length).toBe(3)
 
-    const gap = size * 0.08
-    const boxSize = (size - gap * 4) / 3
-    const min = gap
-    const max = size - gap - boxSize
+    const base = Math.min(width, height)
+    const gap = base * 0.08
+    const boxSize = (base - gap * 4) / 3
+    const minX = gap
+    const minY = gap
+    const maxX = width - gap - boxSize
+    const maxY = height - gap - boxSize
 
     const positions = node.children.map((child: any) => ({
       x: child.position.x,
@@ -44,10 +48,10 @@ describe("createNode", () => {
     }))
 
     positions.forEach((pos) => {
-      expect(pos.x).toBeGreaterThanOrEqual(min)
-      expect(pos.y).toBeGreaterThanOrEqual(min)
-      expect(pos.x).toBeLessThanOrEqual(max)
-      expect(pos.y).toBeLessThanOrEqual(max)
+      expect(pos.x).toBeGreaterThanOrEqual(minX)
+      expect(pos.y).toBeGreaterThanOrEqual(minY)
+      expect(pos.x).toBeLessThanOrEqual(maxX)
+      expect(pos.y).toBeLessThanOrEqual(maxY)
     })
 
     expect(nonOverlapping(positions[0], positions[1])).toBe(true)

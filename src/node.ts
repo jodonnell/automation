@@ -30,15 +30,19 @@ const createBox = (size: number, label: string): BoxContainer => {
   return box
 }
 
-export const createNode = (size: number): NodeContainer => {
+export const createNode = (width: number, height: number): NodeContainer => {
   const node = new Container() as NodeContainer
-  node.nodeSize = size
+  node.nodeWidth = width
+  node.nodeHeight = height
 
-  const gap = size * 0.08
-  const boxSize = (size - gap * 4) / 3
+  const base = Math.min(width, height)
+  const gap = base * 0.08
+  const boxSize = (base - gap * 4) / 3
   const padding = gap
-  const min = padding
-  const max = size - padding - boxSize
+  const minX = padding
+  const minY = padding
+  const maxX = width - padding - boxSize
+  const maxY = height - padding - boxSize
 
   const placed: { x: number; y: number }[] = []
   const overlaps = (x: number, y: number) =>
@@ -54,8 +58,8 @@ export const createNode = (size: number): NodeContainer => {
   const pickSpot = () => {
     const maxAttempts = 200
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      const x = min + Math.random() * (max - min)
-      const y = min + Math.random() * (max - min)
+      const x = minX + Math.random() * (maxX - minX)
+      const y = minY + Math.random() * (maxY - minY)
       if (!overlaps(x, y)) return { x, y }
     }
     return null
@@ -69,7 +73,7 @@ export const createNode = (size: number): NodeContainer => {
       box.position.set(spot.x, spot.y)
     } else {
       const fallbackX = gap + index * (boxSize + gap)
-      const fallbackY = (size - boxSize) / 2
+      const fallbackY = (height - boxSize) / 2
       placed.push({ x: fallbackX, y: fallbackY })
       box.position.set(fallbackX, fallbackY)
     }

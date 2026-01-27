@@ -17,12 +17,18 @@ type CameraController = {
 }
 
 type InteractionDeps = {
-  camera: { addChild: (child: unknown) => void; removeChild: (child: unknown) => void; removeChildren: () => void }
+  camera: {
+    addChild: (child: unknown) => void
+    removeChild: (child: unknown) => void
+    removeChildren: () => void
+    position: { x: number; y: number }
+    scale: { x: number; y: number }
+  }
   stage: { eventMode?: string; hitArea?: unknown; on: (event: string, handler: (event: unknown) => void) => void }
   screen: unknown
   nodeManager: NodeManager
   cameraController: CameraController
-  getNodeSize: () => number
+  getNodeSize: () => { width: number; height: number }
   getCenteredTransform: (bounds: Bounds, scale: number) => { x: number; y: number; scale: number }
   getFocusedTransform: (bounds: Bounds) => { x: number; y: number; scale: number }
   worldBoundsToCameraLocal: (bounds: Bounds) => Bounds
@@ -60,14 +66,18 @@ export const setupInteractions = ({
   }
 
   const handleDoubleClickBox = (box: BoxContainer) => {
-    const nextNode = createNode(getNodeSize())
+    const nextSize = getNodeSize()
+    const nextNode = createNode(nextSize.width, nextSize.height)
     nextNode.alpha = 1
 
     const bounds = box.getBounds()
     const target = getFocusedTransform(bounds)
     const localBounds = worldBoundsToCameraLocal(bounds)
 
-    const startScale = localBounds.width / nextNode.nodeSize
+    const startScale = Math.min(
+      localBounds.width / nextNode.nodeWidth,
+      localBounds.height / nextNode.nodeHeight,
+    )
     nextNode.scale.set(startScale)
     nextNode.position.set(localBounds.x, localBounds.y)
 
@@ -89,12 +99,16 @@ export const setupInteractions = ({
         const previous = nodeManager.current
         nodeManager.push()
 
+        const bakedX = camera.position.x + nextNode.position.x * camera.scale.x
+        const bakedY = camera.position.y + nextNode.position.y * camera.scale.y
+        const bakedScale = nextNode.scale.x * camera.scale.x
+        nextNode.position.set(bakedX, bakedY)
+        nextNode.scale.set(bakedScale)
+
         camera.removeChild(previous)
         camera.removeChild(mask)
         nextNode.mask = null
         nodeManager.current = nextNode
-        nodeManager.current.scale.set(1)
-        nodeManager.positionCurrent()
         nodeManager.current.alpha = 1
 
         cameraController.reset()

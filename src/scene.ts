@@ -21,7 +21,10 @@ export const init = async (): Promise<void> => {
   const camera = new Container()
   app.stage.addChild(camera)
 
-  const getNodeSize = () => Math.min(app.renderer.width, app.renderer.height)
+  const getNodeSize = () => ({
+    width: app.renderer.width,
+    height: app.renderer.height,
+  })
   const getViewSize = () => ({
     width: app.renderer.width,
     height: app.renderer.height,

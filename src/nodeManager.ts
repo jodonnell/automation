@@ -11,17 +11,18 @@ export type NodeManager = {
 
 export const createNodeManager = (
   camera: Container,
-  getNodeSize: () => number,
+  getNodeSize: () => { width: number; height: number },
   getViewSize: () => { width: number; height: number },
 ): NodeManager => {
   const positionNode = (node: NodeContainer) => {
     const { width, height } = getViewSize()
-    const x = (width - node.nodeSize) / 2
-    const y = (height - node.nodeSize) / 2
+    const x = (width - node.nodeWidth) / 2
+    const y = (height - node.nodeHeight) / 2
     node.position.set(x, y)
   }
 
-  let currentNode = createNode(getNodeSize())
+  const initialSize = getNodeSize()
+  let currentNode = createNode(initialSize.width, initialSize.height)
   positionNode(currentNode)
   camera.addChild(currentNode)
 

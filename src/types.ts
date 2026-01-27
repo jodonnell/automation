@@ -1,7 +1,7 @@
 import type { Container } from "pixi.js"
 
 export type BoxContainer = Container & { boxSize: number }
-export type NodeContainer = Container & { nodeSize: number }
+export type NodeContainer = Container & { nodeWidth: number; nodeHeight: number }
 
 export type Bounds = {
   x: number
