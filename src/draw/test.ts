@@ -8,6 +8,7 @@ type Tween = {
   duration: number
   from: { x: number; y: number; scale: number }
   to: { x: number; y: number; scale: number }
+  onUpdate?: (eased: number) => void
   onComplete?: () => void
 }
 
@@ -129,6 +130,7 @@ export const test = async (): Promise<void> => {
     to: { x: number; y: number; scale: number },
     duration: number,
     onComplete?: () => void,
+    onUpdate?: (eased: number) => void,
   ) => {
     activeTween = {
       start: performance.now(),
@@ -136,6 +138,7 @@ export const test = async (): Promise<void> => {
       from: { x: camera.position.x, y: camera.position.y, scale: camera.scale.x },
       to,
       onComplete,
+      onUpdate,
     }
   }
 
@@ -199,7 +202,16 @@ export const test = async (): Promise<void> => {
     nextNode.mask = mask
     camera.addChild(nextNode)
 
-    startTween(target, ZOOM_IN_DURATION, () => {
+    const fadeOuterLayer = (eased: number) => {
+      const minAlpha = 0
+      const fade = Math.min(1, eased / 0.5)
+      currentNode.alpha = 1 - (1 - minAlpha) * fade
+    }
+
+    startTween(
+      target,
+      ZOOM_IN_DURATION,
+      () => {
       const previous = currentNode
       nodeStack.push(previous)
 
@@ -209,10 +221,13 @@ export const test = async (): Promise<void> => {
       currentNode = nextNode
       currentNode.scale.set(1)
       positionNode(currentNode)
+      currentNode.alpha = 1
 
       resetCamera()
       bindBoxHandlers(currentNode)
-    })
+      },
+      fadeOuterLayer,
+    )
   }
 
   let lastClickTime = 0
@@ -256,6 +271,7 @@ export const test = async (): Promise<void> => {
     const nextY = activeTween.from.y + (activeTween.to.y - activeTween.from.y) * eased
     const nextScale = activeTween.from.scale + (activeTween.to.scale - activeTween.from.scale) * eased
     setCameraTransform(nextX, nextY, nextScale)
+    activeTween.onUpdate?.(eased)
     if (t >= 1) {
       const done = activeTween.onComplete
       activeTween = null
