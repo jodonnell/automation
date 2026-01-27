@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 import { createPixiMock } from "./helpers/pixiMock"
 
 vi.mock("pixi.js", () => createPixiMock())
@@ -16,19 +16,7 @@ const nonOverlapping = (a: { x: number; y: number; size: number }, b: { x: numbe
 }
 
 describe("createNode", () => {
-  beforeEach(() => {
-    vi.restoreAllMocks()
-  })
-
   it("creates three boxes within bounds without overlap", () => {
-    const sequence = [0.0326, 0.0326, 0.5217, 0.5217, 0.9565, 0.0326]
-    let idx = 0
-    vi.spyOn(Math, "random").mockImplementation(() => {
-      const value = sequence[idx] ?? 0.5
-      idx += 1
-      return value
-    })
-
     const width = 400
     const height = 300
     const spec: NodeSpec = {
@@ -67,5 +55,29 @@ describe("createNode", () => {
     expect(nonOverlapping(positions[0], positions[1])).toBe(true)
     expect(nonOverlapping(positions[0], positions[2])).toBe(true)
     expect(nonOverlapping(positions[1], positions[2])).toBe(true)
+  })
+
+  it("is deterministic for the same spec and size", () => {
+    const width = 500
+    const height = 320
+    const spec: NodeSpec = {
+      id: "root",
+      label: "",
+      children: [
+        { id: "a", label: "A" },
+        { id: "b", label: "B" },
+        { id: "c", label: "C" },
+      ],
+    }
+
+    const first = createNode(spec, width, height)
+    const second = createNode(spec, width, height)
+
+    first.children.forEach((child, index) => {
+      const firstPos = (child as { position: { x: number; y: number } }).position
+      const secondPos = (second.children[index] as { position: { x: number; y: number } }).position
+      expect(firstPos.x).toBeCloseTo(secondPos.x, 6)
+      expect(firstPos.y).toBeCloseTo(secondPos.y, 6)
+    })
   })
 })
