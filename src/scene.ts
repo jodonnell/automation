@@ -1,7 +1,18 @@
 import { Application, Container, Graphics, Point } from "pixi.js"
-import { DOUBLE_CLICK_MS, ZOOM_IN_DURATION, ZOOM_OUT_DURATION } from "./constants"
+import {
+  DOUBLE_CLICK_MS,
+  ZOOM_IN_DURATION,
+  ZOOM_OUT_DURATION,
+} from "./constants"
 import { easeInOutCubic } from "./easing"
 import { createNode } from "./node"
+import {
+  centerBoundsAtScale,
+  computeOuterAlpha,
+  focusBounds,
+  lerpCameraTransform,
+  worldBoundsToLocal,
+} from "./sceneMath"
 import type { Bounds, BoxContainer, NodeContainer, Tween } from "./types"
 
 export const test = async (): Promise<void> => {
@@ -36,24 +47,11 @@ export const test = async (): Promise<void> => {
     camera.scale.set(scale)
   }
 
-  const centerBoundsAtScale = (bounds: Bounds, scale: number) => {
-    const viewWidth = app.renderer.width
-    const viewHeight = app.renderer.height
-    const centerX = bounds.x + bounds.width / 2
-    const centerY = bounds.y + bounds.height / 2
-    return {
-      x: viewWidth / 2 - centerX * scale,
-      y: viewHeight / 2 - centerY * scale,
-      scale,
-    }
-  }
+  const getCenteredTransform = (bounds: Bounds, scale: number) =>
+    centerBoundsAtScale(bounds, app.renderer.width, app.renderer.height, scale)
 
-  const focusBounds = (bounds: Bounds) => {
-    const viewWidth = app.renderer.width
-    const viewHeight = app.renderer.height
-    const scale = Math.min(viewWidth / bounds.width, viewHeight / bounds.height)
-    return centerBoundsAtScale(bounds, scale)
-  }
+  const getFocusedTransform = (bounds: Bounds) =>
+    focusBounds(bounds, app.renderer.width, app.renderer.height)
 
   const startTween = (
     to: { x: number; y: number; scale: number },
@@ -64,7 +62,11 @@ export const test = async (): Promise<void> => {
     activeTween = {
       start: performance.now(),
       duration,
-      from: { x: camera.position.x, y: camera.position.y, scale: camera.scale.x },
+      from: {
+        x: camera.position.x,
+        y: camera.position.y,
+        scale: camera.scale.x,
+      },
       to,
       onComplete,
       onUpdate,
@@ -94,25 +96,17 @@ export const test = async (): Promise<void> => {
     })
   }
 
-  const worldBoundsToCameraLocal = (bounds: Bounds) => {
-    const topLeft = camera.worldTransform.applyInverse(new Point(bounds.x, bounds.y))
-    const bottomRight = camera.worldTransform.applyInverse(
-      new Point(bounds.x + bounds.width, bounds.y + bounds.height),
+  const worldBoundsToCameraLocal = (bounds: Bounds) =>
+    worldBoundsToLocal(bounds, (x, y) =>
+      camera.worldTransform.applyInverse(new Point(x, y)),
     )
-    return {
-      x: topLeft.x,
-      y: topLeft.y,
-      width: bottomRight.x - topLeft.x,
-      height: bottomRight.y - topLeft.y,
-    }
-  }
 
   const handleDoubleClickBox = (box: BoxContainer) => {
     const nextNode = createNode(getNodeSize())
     nextNode.alpha = 1
 
     const bounds = box.getBounds()
-    const target = focusBounds(bounds)
+    const target = getFocusedTransform(bounds)
     const localBounds = worldBoundsToCameraLocal(bounds)
 
     const startScale = localBounds.width / nextNode.nodeSize
@@ -120,35 +114,38 @@ export const test = async (): Promise<void> => {
     nextNode.position.set(localBounds.x, localBounds.y)
 
     const mask = new Graphics()
-    mask.rect(localBounds.x, localBounds.y, localBounds.width, localBounds.height)
+    mask.rect(
+      localBounds.x,
+      localBounds.y,
+      localBounds.width,
+      localBounds.height,
+    )
     mask.fill(0xffffff)
     camera.addChild(mask)
     nextNode.mask = mask
     camera.addChild(nextNode)
 
     const fadeOuterLayer = (eased: number) => {
-      const minAlpha = 0
-      const fade = Math.min(1, eased / 0.5)
-      currentNode.alpha = 1 - (1 - minAlpha) * fade
+      currentNode.alpha = computeOuterAlpha(eased, 0, 0.5)
     }
 
     startTween(
       target,
       ZOOM_IN_DURATION,
       () => {
-      const previous = currentNode
-      nodeStack.push(previous)
+        const previous = currentNode
+        nodeStack.push(previous)
 
-      camera.removeChild(previous)
-      camera.removeChild(mask)
-      nextNode.mask = null
-      currentNode = nextNode
-      currentNode.scale.set(1)
-      positionNode(currentNode)
-      currentNode.alpha = 1
+        camera.removeChild(previous)
+        camera.removeChild(mask)
+        nextNode.mask = null
+        currentNode = nextNode
+        currentNode.scale.set(1)
+        positionNode(currentNode)
+        currentNode.alpha = 1
 
-      resetCamera()
-      bindBoxHandlers(currentNode)
+        resetCamera()
+        bindBoxHandlers(currentNode)
       },
       fadeOuterLayer,
     )
@@ -171,7 +168,7 @@ export const test = async (): Promise<void> => {
       if (!previous) return
 
       const bounds = currentNode.getBounds()
-      const target = centerBoundsAtScale(bounds, 0.6)
+      const target = getCenteredTransform(bounds, 0.6)
 
       startTween(target, ZOOM_OUT_DURATION, () => {
         camera.removeChildren()
@@ -191,10 +188,12 @@ export const test = async (): Promise<void> => {
     const now = performance.now()
     const t = Math.min(1, (now - activeTween.start) / activeTween.duration)
     const eased = easeInOutCubic(t)
-    const nextX = activeTween.from.x + (activeTween.to.x - activeTween.from.x) * eased
-    const nextY = activeTween.from.y + (activeTween.to.y - activeTween.from.y) * eased
-    const nextScale = activeTween.from.scale + (activeTween.to.scale - activeTween.from.scale) * eased
-    setCameraTransform(nextX, nextY, nextScale)
+    const { x, y, scale } = lerpCameraTransform(
+      activeTween.from,
+      activeTween.to,
+      eased,
+    )
+    setCameraTransform(x, y, scale)
     activeTween.onUpdate?.(eased)
     if (t >= 1) {
       const done = activeTween.onComplete
