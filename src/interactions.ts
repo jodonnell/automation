@@ -170,6 +170,7 @@ export const setupInteractions = ({
         nodeManager.current = previous
         camera.addChild(nodeManager.current)
         nodeManager.positionCurrent()
+        nodeManager.current.alpha = 1
         cameraController.reset()
         bindBoxHandlers(nodeManager.current)
       })
