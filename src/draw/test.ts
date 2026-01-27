@@ -182,13 +182,16 @@ export const test = async (): Promise<void> => {
 
   const handleDoubleClickBox = (box: BoxContainer) => {
     const nextNode = createNode(getNodeSize())
-    positionNode(nextNode)
     nextNode.alpha = 1
 
     const bounds = box.getBounds()
     const target = focusBounds(bounds)
-
     const localBounds = worldBoundsToCameraLocal(bounds)
+
+    const startScale = localBounds.width / nextNode.nodeSize
+    nextNode.scale.set(startScale)
+    nextNode.position.set(localBounds.x, localBounds.y)
+
     const mask = new Graphics()
     mask.rect(localBounds.x, localBounds.y, localBounds.width, localBounds.height)
     mask.fill(0xffffff)
@@ -204,6 +207,7 @@ export const test = async (): Promise<void> => {
       camera.removeChild(mask)
       nextNode.mask = null
       currentNode = nextNode
+      currentNode.scale.set(1)
       positionNode(currentNode)
 
       resetCamera()
