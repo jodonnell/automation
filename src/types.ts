@@ -4,6 +4,7 @@ export type BoxContainer = Container & { boxSize: number }
 export type NodeContainer = Container & {
   nodeWidth: number
   nodeHeight: number
+  connectionLayer: Container
 }
 
 export type Bounds = {

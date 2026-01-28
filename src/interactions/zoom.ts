@@ -3,11 +3,11 @@ import {
   DOUBLE_CLICK_MS,
   ZOOM_IN_DURATION,
   ZOOM_OUT_DURATION,
-} from "./constants"
-import { createNode } from "./node"
-import { computeOuterAlpha } from "./sceneMath"
-import type { NodeManager } from "./nodeManager"
-import type { Bounds, BoxContainer, NodeContainer, NodeSpec } from "./types"
+} from "../constants"
+import { createNode } from "../node"
+import { computeOuterAlpha } from "../sceneMath"
+import type { NodeManager } from "../nodeManager"
+import type { Bounds, BoxContainer, NodeSpec } from "../types"
 
 type CameraController = {
   readonly isTweening: boolean
@@ -20,7 +20,7 @@ type CameraController = {
   reset: () => void
 }
 
-type InteractionDeps = {
+type ZoomDeps = {
   camera: {
     addChild: (child: unknown) => void
     removeChild: (child: unknown) => void
@@ -28,12 +28,6 @@ type InteractionDeps = {
     position: { x: number; y: number }
     scale: { x: number; y: number }
   }
-  stage: {
-    eventMode?: string
-    hitArea?: unknown
-    on: (event: string, handler: (event: unknown) => void) => void
-  }
-  screen: unknown
   nodeManager: NodeManager
   cameraController: CameraController
   getNodeSize: () => { width: number; height: number }
@@ -48,12 +42,12 @@ type InteractionDeps = {
   }
   worldBoundsToCameraLocal: (bounds: Bounds) => Bounds
   resolveSpecForBox: (box: BoxContainer) => NodeSpec | null
+  onRebindBoxes: () => void
+  onClearDrag: () => void
 }
 
-export const setupInteractions = ({
+export const createZoomInteractions = ({
   camera,
-  stage,
-  screen,
   nodeManager,
   cameraController,
   getNodeSize,
@@ -61,31 +55,11 @@ export const setupInteractions = ({
   getFocusedTransform,
   worldBoundsToCameraLocal,
   resolveSpecForBox,
-}: InteractionDeps) => {
-  const bindBoxHandlers = (node: NodeContainer) => {
-    node.children.forEach((child) => {
-      const box = child as BoxContainer
-      box.removeAllListeners("pointerdown")
-      const spec = resolveSpecForBox(box)
-      const isZoomable = Boolean(spec?.children && spec.children.length > 0)
-      box.cursor = isZoomable ? "pointer" : "default"
-      box.on("pointerdown", (event) => {
-        const button = (event as { button?: number }).button
-        if (button !== 0 || cameraController.isTweening || !isZoomable) return
-        const now = performance.now()
-        if (lastClickTarget === box && now - lastClickTime < DOUBLE_CLICK_MS) {
-          lastClickTime = 0
-          lastClickTarget = null
-          handleDoubleClickBox(box)
-          return
-        }
-        lastClickTime = now
-        lastClickTarget = box
-      })
-    })
-  }
-
+  onRebindBoxes,
+  onClearDrag,
+}: ZoomDeps) => {
   const handleDoubleClickBox = (box: BoxContainer) => {
+    onClearDrag()
     const spec = resolveSpecForBox(box)
     if (!spec || !spec.children || spec.children.length === 0) return
     const nextSize = getNodeSize()
@@ -139,43 +113,44 @@ export const setupInteractions = ({
         nodeManager.current.alpha = 1
 
         cameraController.reset()
-        bindBoxHandlers(nodeManager.current)
+        onRebindBoxes()
       },
       fadeOuterLayer,
     )
   }
 
-  let lastClickTime = 0
-  let lastClickTarget: BoxContainer | null = null
   let lastRightClickTime = 0
 
-  bindBoxHandlers(nodeManager.current)
+  const attachStageHandlers = (stage: {
+    on: (event: string, handler: (event: unknown) => void) => void
+  }) => {
+    stage.on("pointerdown", (event) => {
+      const button = (event as { button?: number }).button
+      if (button !== 2 || cameraController.isTweening) return
+      const now = performance.now()
+      if (now - lastRightClickTime < DOUBLE_CLICK_MS) {
+        lastRightClickTime = 0
+        onClearDrag()
+        const previous = nodeManager.pop()
+        if (!previous) return
 
-  stage.eventMode = "static"
-  stage.hitArea = screen
-  stage.on("pointerdown", (event) => {
-    const button = (event as { button?: number }).button
-    if (button !== 2 || cameraController.isTweening) return
-    const now = performance.now()
-    if (now - lastRightClickTime < DOUBLE_CLICK_MS) {
-      lastRightClickTime = 0
-      const previous = nodeManager.pop()
-      if (!previous) return
+        const bounds = nodeManager.current.getBounds()
+        const target = getCenteredTransform(bounds, 0.6)
 
-      const bounds = nodeManager.current.getBounds()
-      const target = getCenteredTransform(bounds, 0.6)
+        cameraController.startTween(target, ZOOM_OUT_DURATION, () => {
+          camera.removeChildren()
+          nodeManager.current = previous
+          camera.addChild(nodeManager.current)
+          nodeManager.positionCurrent()
+          nodeManager.current.alpha = 1
+          cameraController.reset()
+          onRebindBoxes()
+        })
+        return
+      }
+      lastRightClickTime = now
+    })
+  }
 
-      cameraController.startTween(target, ZOOM_OUT_DURATION, () => {
-        camera.removeChildren()
-        nodeManager.current = previous
-        camera.addChild(nodeManager.current)
-        nodeManager.positionCurrent()
-        nodeManager.current.alpha = 1
-        cameraController.reset()
-        bindBoxHandlers(nodeManager.current)
-      })
-      return
-    }
-    lastRightClickTime = now
-  })
+  return { handleDoubleClickBox, attachStageHandlers }
 }

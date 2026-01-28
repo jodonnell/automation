@@ -65,6 +65,7 @@ export const createNode = (
   const node = new Container() as NodeContainer
   node.nodeWidth = width
   node.nodeHeight = height
+  node.connectionLayer = new Container()
 
   const base = Math.min(width, height)
   const gap = base * 0.08
@@ -96,6 +97,8 @@ export const createNode = (
     }
     return null
   }
+
+  node.addChild(node.connectionLayer)
 
   const children = getChildren(spec)
   children.forEach((child, index) => {
