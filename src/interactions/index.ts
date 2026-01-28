@@ -1,5 +1,6 @@
 import { createDragInteractions } from "./drag"
 import { createZoomInteractions } from "./zoom"
+import type { GameModel } from "../model"
 import type { NodeManager } from "../nodeManager"
 import type { Bounds, BoxContainer, NodeSpec } from "../types"
 
@@ -29,6 +30,7 @@ type InteractionDeps = {
   }
   screen: unknown
   nodeManager: NodeManager
+  model: GameModel
   cameraController: CameraController
   getNodeSize: () => { width: number; height: number }
   getCenteredTransform: (
@@ -49,6 +51,7 @@ export const setupInteractions = ({
   stage,
   screen,
   nodeManager,
+  model,
   cameraController,
   getNodeSize,
   getCenteredTransform,
@@ -59,6 +62,7 @@ export const setupInteractions = ({
   let handleDoubleClickBox: (box: BoxContainer) => void = () => {}
   const drag = createDragInteractions({
     nodeManager,
+    model,
     cameraController,
     resolveSpecForBox,
     onDoubleClick: (box) => handleDoubleClickBox(box),

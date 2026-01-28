@@ -9,6 +9,7 @@ import {
   worldBoundsToLocal,
 } from "./sceneMath"
 import type { Bounds, NodeSpec } from "./types"
+import { createGameModel } from "./model"
 
 export const init = async (): Promise<void> => {
   const app = new Application()
@@ -31,11 +32,13 @@ export const init = async (): Promise<void> => {
     height: app.renderer.height,
   })
 
+  const model = createGameModel()
   const nodeManager = createNodeManager(
     camera,
     getNodeSize,
     getViewSize,
     NODE_TREE,
+    model,
   )
   const cameraController = createCameraController(camera)
 
@@ -62,6 +65,7 @@ export const init = async (): Promise<void> => {
     stage: app.stage,
     screen: app.screen,
     nodeManager,
+    model,
     cameraController,
     getNodeSize,
     getCenteredTransform,

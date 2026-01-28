@@ -1,7 +1,9 @@
 import { Graphics, Point } from "pixi.js"
-import { DOUBLE_CLICK_MS } from "../constants"
+import { CONNECTION_STYLE, DOUBLE_CLICK_MS } from "../constants"
+import { drawSmoothPath } from "../path"
+import type { GameModel } from "../model"
 import type { NodeManager } from "../nodeManager"
-import type { BoxContainer, NodeContainer, NodeSpec } from "../types"
+import type { BoxContainer, NodeContainer, NodeSpec, PointData } from "../types"
 
 type CameraController = {
   readonly isTweening: boolean
@@ -9,6 +11,7 @@ type CameraController = {
 
 type DragDeps = {
   nodeManager: NodeManager
+  model: GameModel
   cameraController: CameraController
   resolveSpecForBox: (box: BoxContainer) => NodeSpec | null
   onDoubleClick: (box: BoxContainer) => void
@@ -26,6 +29,7 @@ type DragState = {
 
 export const createDragInteractions = ({
   nodeManager,
+  model,
   cameraController,
   resolveSpecForBox,
   onDoubleClick,
@@ -118,49 +122,8 @@ export const createDragInteractions = ({
   let lastClickTime = 0
   let lastClickTarget: BoxContainer | null = null
 
-  const drawConnection = (
-    line: Graphics,
-    start: { x: number; y: number },
-    points: { x: number; y: number }[],
-  ) => {
-    line.clear()
-    line.moveTo(start.x, start.y)
-    if (points.length === 0) {
-      line.stroke({ width: 4, color: 0x111111, alpha: 0.7 })
-      return
-    }
-    const allPoints = [start, ...points]
-    if (allPoints.length === 2) {
-      line.lineTo(allPoints[1].x, allPoints[1].y)
-      line.stroke({ width: 4, color: 0x111111, alpha: 0.7 })
-      return
-    }
-    const chaikinSmooth = (input: { x: number; y: number }[]) => {
-      const output: { x: number; y: number }[] = [input[0]]
-      for (let i = 0; i < input.length - 1; i += 1) {
-        const p0 = input[i]
-        const p1 = input[i + 1]
-        const q = {
-          x: 0.75 * p0.x + 0.25 * p1.x,
-          y: 0.75 * p0.y + 0.25 * p1.y,
-        }
-        const r = {
-          x: 0.25 * p0.x + 0.75 * p1.x,
-          y: 0.25 * p0.y + 0.75 * p1.y,
-        }
-        output.push(q, r)
-      }
-      output.push(input[input.length - 1])
-      return output
-    }
-    let smoothed = allPoints
-    for (let i = 0; i < 2; i += 1) {
-      smoothed = chaikinSmooth(smoothed)
-    }
-    for (let i = 1; i < smoothed.length; i += 1) {
-      line.lineTo(smoothed[i].x, smoothed[i].y)
-    }
-    line.stroke({ width: 4, color: 0x111111, alpha: 0.7 })
+  const drawConnection = (line: Graphics, points: PointData[]) => {
+    drawSmoothPath(line, points, CONNECTION_STYLE)
   }
 
   const clearDrag = () => {
@@ -207,7 +170,7 @@ export const createDragInteractions = ({
       ? getBoxEdgePoint(targetBox, dragState.lastOutsidePoint ?? startAnchor)
       : null
     const pointsToDraw = buildDrawPoints(dragState, endAnchor)
-    drawConnection(line, startAnchor, pointsToDraw)
+    drawConnection(line, [startAnchor, ...pointsToDraw])
   }
 
   const handlePointerUp = (event: unknown) => {
@@ -232,7 +195,17 @@ export const createDragInteractions = ({
               index === array.length - 1 ? endAnchor : point,
             )
           : [endAnchor]
-      drawConnection(line, startAnchor, points)
+      const connectionPoints = [startAnchor, ...points]
+      drawConnection(line, connectionPoints)
+      const fromId = startBox.name ?? ""
+      const toId = targetBox.name ?? ""
+      if (fromId && toId) {
+        model.addConnection(nodeManager.current.specId, {
+          fromId,
+          toId,
+          points: connectionPoints,
+        })
+      }
       dragState = null
     } else {
       clearDrag()

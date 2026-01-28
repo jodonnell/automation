@@ -1,5 +1,5 @@
 import { Container, Graphics, Rectangle, Text } from "pixi.js"
-import type { BoxContainer, NodeContainer, NodeSpec } from "./types"
+import type { BoxContainer, NodeContainer, NodeLayout, NodeSpec } from "./types"
 
 const createBox = (
   size: number,
@@ -61,15 +61,17 @@ export const createNode = (
   spec: NodeSpec,
   width: number,
   height: number,
+  layout?: NodeLayout,
 ): NodeContainer => {
   const node = new Container() as NodeContainer
   node.nodeWidth = width
   node.nodeHeight = height
   node.connectionLayer = new Container()
+  node.specId = spec.id
 
   const base = Math.min(width, height)
   const gap = base * 0.08
-  const boxSize = (base - gap * 4) / 3
+  const boxSize = layout?.boxSize ?? (base - gap * 4) / 3
   const padding = gap
   const minX = padding
   const minY = padding
@@ -108,7 +110,8 @@ export const createNode = (
       child.id,
       getChildren(child).length > 0,
     )
-    const spot = pickSpot()
+    const stored = layout?.positions.get(child.id)
+    const spot = stored ?? pickSpot()
     if (spot) {
       placed.push(spot)
       box.position.set(spot.x, spot.y)

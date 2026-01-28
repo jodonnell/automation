@@ -4,7 +4,6 @@ import {
   ZOOM_IN_DURATION,
   ZOOM_OUT_DURATION,
 } from "../constants"
-import { createNode } from "../node"
 import { computeOuterAlpha } from "../sceneMath"
 import type { NodeManager } from "../nodeManager"
 import type { Bounds, BoxContainer, NodeSpec } from "../types"
@@ -63,7 +62,11 @@ export const createZoomInteractions = ({
     const spec = resolveSpecForBox(box)
     if (!spec || !spec.children || spec.children.length === 0) return
     const nextSize = getNodeSize()
-    const nextNode = createNode(spec, nextSize.width, nextSize.height)
+    const nextNode = nodeManager.getOrCreateNode(
+      spec,
+      nextSize.width,
+      nextSize.height,
+    )
     nextNode.alpha = 1
 
     const bounds = box.getBounds()

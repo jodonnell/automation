@@ -1,5 +1,7 @@
 import type { Container } from "pixi.js"
+import { renderConnections } from "./connectionRender"
 import { createNode } from "./node"
+import type { GameModel } from "./model"
 import type { NodeContainer, NodeSpec } from "./types"
 
 export type NodeManager = {
@@ -7,6 +9,7 @@ export type NodeManager = {
   push: () => void
   pop: () => NodeContainer | undefined
   positionCurrent: () => void
+  getOrCreateNode: (spec: NodeSpec, width: number, height: number) => NodeContainer
 }
 
 export const createNodeManager = (
@@ -14,6 +17,7 @@ export const createNodeManager = (
   getNodeSize: () => { width: number; height: number },
   getViewSize: () => { width: number; height: number },
   rootSpec: NodeSpec,
+  model: GameModel,
 ): NodeManager => {
   const positionNode = (node: NodeContainer) => {
     const { width, height } = getViewSize()
@@ -23,7 +27,23 @@ export const createNodeManager = (
   }
 
   const initialSize = getNodeSize()
-  let currentNode = createNode(rootSpec, initialSize.width, initialSize.height)
+  const nodeCache = new Map<string, NodeContainer>()
+  const getOrCreateNode = (
+    spec: NodeSpec,
+    width: number,
+    height: number,
+  ) => {
+    const cached = nodeCache.get(spec.id)
+    if (cached && cached.nodeWidth === width && cached.nodeHeight === height) {
+      return cached
+    }
+    const layout = model.getLayout(spec, width, height)
+    const nextNode = createNode(spec, width, height, layout)
+    renderConnections(nextNode, model.getConnections(spec.id))
+    nodeCache.set(spec.id, nextNode)
+    return nextNode
+  }
+  let currentNode = getOrCreateNode(rootSpec, initialSize.width, initialSize.height)
   positionNode(currentNode)
   camera.addChild(currentNode)
 
@@ -45,5 +65,6 @@ export const createNodeManager = (
     positionCurrent() {
       positionNode(currentNode)
     },
+    getOrCreateNode,
   }
 }

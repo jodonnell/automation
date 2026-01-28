@@ -5,6 +5,7 @@ export type NodeContainer = Container & {
   nodeWidth: number
   nodeHeight: number
   connectionLayer: Container
+  specId: string
 }
 
 export type Bounds = {
@@ -12,6 +13,22 @@ export type Bounds = {
   y: number
   width: number
   height: number
+}
+
+export type PointData = {
+  x: number
+  y: number
+}
+
+export type ConnectionPath = {
+  fromId: string
+  toId: string
+  points: PointData[]
+}
+
+export type NodeLayout = {
+  boxSize: number
+  positions: Map<string, PointData>
 }
 
 export type NodeSpec = {
