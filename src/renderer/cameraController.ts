@@ -1,7 +1,7 @@
 import type { Container } from "pixi.js"
-import type { Tween } from "./core/types"
-import { easeInOutCubic } from "./easing"
-import { lerpCameraTransform } from "./sceneMath"
+import type { Tween } from "../core/types"
+import { easeInOutCubic } from "../easing"
+import { lerpCameraTransform } from "../core/sceneMath"
 
 export const createCameraController = (
   camera: Container,

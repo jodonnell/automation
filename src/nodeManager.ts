@@ -1,6 +1,6 @@
 import type { Container } from "pixi.js"
-import { renderConnections } from "./connectionRender"
-import { createNode } from "./node"
+import { renderConnections } from "./renderer/connectionRenderer"
+import { createNode } from "./renderer/nodeRenderer"
 import type { GameModel } from "./core/model"
 import type { NodeSpec } from "./core/types"
 import type { NodeContainer } from "./renderer/types"

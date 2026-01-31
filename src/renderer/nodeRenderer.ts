@@ -1,6 +1,6 @@
 import { Container, Graphics, Rectangle, Text } from "pixi.js"
-import type { NodeLayout, NodeSpec } from "./core/types"
-import type { BoxContainer, NodeContainer } from "./renderer/types"
+import type { NodeLayout, NodeSpec } from "../core/types"
+import type { BoxContainer, NodeContainer } from "./types"
 
 const createBox = (
   size: number,

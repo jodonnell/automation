@@ -1,6 +1,6 @@
 import { Graphics, Point } from "pixi.js"
 import { CONNECTION_STYLE, DOUBLE_CLICK_MS } from "../constants"
-import { drawSmoothPath } from "../path"
+import { drawSmoothPath } from "../renderer/path"
 import type { GameModel } from "../core/model"
 import type { NodeManager } from "../nodeManager"
 import type { NodeSpec, PointData } from "../core/types"

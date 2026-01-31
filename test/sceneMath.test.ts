@@ -4,7 +4,7 @@ import {
   computeOuterAlpha,
   lerpCameraTransform,
   worldBoundsToLocal,
-} from "../src/sceneMath"
+} from "../src/core/sceneMath"
 
 const bounds = { x: 10, y: 20, width: 100, height: 200 }
 

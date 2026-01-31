@@ -1,8 +1,8 @@
 import { Graphics } from "pixi.js"
-import { CONNECTION_STYLE } from "./constants"
+import { CONNECTION_STYLE } from "../constants"
 import { drawSmoothPath } from "./path"
-import type { ConnectionPath, IncomingStub } from "./core/types"
-import type { NodeContainer } from "./renderer/types"
+import type { ConnectionPath, IncomingStub } from "../core/types"
+import type { NodeContainer } from "./types"
 
 export const renderConnections = (
   node: NodeContainer,

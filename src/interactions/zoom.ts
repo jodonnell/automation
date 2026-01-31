@@ -4,7 +4,7 @@ import {
   ZOOM_IN_DURATION,
   ZOOM_OUT_DURATION,
 } from "../constants"
-import { computeOuterAlpha } from "../sceneMath"
+import { computeOuterAlpha } from "../core/sceneMath"
 import type { NodeManager } from "../nodeManager"
 import type { Bounds, NodeSpec } from "../core/types"
 import type { BoxContainer } from "../renderer/types"

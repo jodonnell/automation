@@ -3,7 +3,7 @@ import { createPixiMock } from "./helpers/pixiMock"
 
 vi.mock("pixi.js", () => createPixiMock())
 
-import { createNode } from "../src/node"
+import { createNode } from "../src/renderer/nodeRenderer"
 import { computeLayout } from "../src/core/layout"
 import type { NodeSpec } from "../src/core/types"
 
