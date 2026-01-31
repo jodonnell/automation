@@ -111,6 +111,34 @@ export const createDragInteractions = ({
     return { x: center.x + dx * scale, y: center.y + dy * scale }
   }
 
+  const buildIncomingStub = (
+    box: BoxContainer,
+    edgePoint: { x: number; y: number },
+  ) => {
+    const localX = edgePoint.x - box.position.x
+    const localY = edgePoint.y - box.position.y
+    const half = box.boxSize / 2
+    const dx = half - localX
+    const dy = half - localY
+    const length = Math.hypot(dx, dy) || 1
+    const dirX = dx / length
+    const dirY = dy / length
+    const viewWidth = nodeManager.current.nodeWidth
+    const viewHeight = nodeManager.current.nodeHeight
+    const start = {
+      x: (localX / box.boxSize) * viewWidth,
+      y: (localY / box.boxSize) * viewHeight,
+    }
+    const stubLength = Math.min(viewWidth, viewHeight) * 0.12
+    return {
+      start,
+      end: {
+        x: start.x + dirX * stubLength,
+        y: start.y + dirY * stubLength,
+      },
+    }
+  }
+
   const getLocalPointFromEvent = (event: unknown) => {
     const global = (event as { global?: { x: number; y: number } }).global
     if (!global) return { x: 0, y: 0 }
@@ -205,6 +233,10 @@ export const createDragInteractions = ({
           toId,
           points: connectionPoints,
         })
+        const targetSpec = resolveSpecForBox(targetBox)
+        if (targetSpec) {
+          model.addIncomingStub(targetSpec.id, buildIncomingStub(targetBox, endAnchor))
+        }
       }
       dragState = null
     } else {

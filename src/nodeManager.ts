@@ -35,11 +35,20 @@ export const createNodeManager = (
   ) => {
     const cached = nodeCache.get(spec.id)
     if (cached && cached.nodeWidth === width && cached.nodeHeight === height) {
+      renderConnections(
+        cached,
+        model.getConnections(spec.id),
+        model.getIncomingStubs(spec.id),
+      )
       return cached
     }
     const layout = model.getLayout(spec, width, height)
     const nextNode = createNode(spec, width, height, layout)
-    renderConnections(nextNode, model.getConnections(spec.id))
+    renderConnections(
+      nextNode,
+      model.getConnections(spec.id),
+      model.getIncomingStubs(spec.id),
+    )
     nodeCache.set(spec.id, nextNode)
     return nextNode
   }

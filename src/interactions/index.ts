@@ -37,11 +37,6 @@ type InteractionDeps = {
     bounds: Bounds,
     scale: number,
   ) => { x: number; y: number; scale: number }
-  getFocusedTransform: (bounds: Bounds) => {
-    x: number
-    y: number
-    scale: number
-  }
   worldBoundsToCameraLocal: (bounds: Bounds) => Bounds
   resolveSpecForBox: (box: BoxContainer) => NodeSpec | null
 }
@@ -55,7 +50,6 @@ export const setupInteractions = ({
   cameraController,
   getNodeSize,
   getCenteredTransform,
-  getFocusedTransform,
   worldBoundsToCameraLocal,
   resolveSpecForBox,
 }: InteractionDeps) => {
@@ -74,7 +68,6 @@ export const setupInteractions = ({
     cameraController,
     getNodeSize,
     getCenteredTransform,
-    getFocusedTransform,
     worldBoundsToCameraLocal,
     resolveSpecForBox,
     onRebindBoxes: () => drag.bindBoxHandlers(nodeManager.current),
@@ -88,4 +81,8 @@ export const setupInteractions = ({
   stage.hitArea = screen
   drag.attachStageHandlers(stage)
   zoom.attachStageHandlers(stage)
+
+  return {
+    rebindBoxes: () => drag.bindBoxHandlers(nodeManager.current),
+  }
 }

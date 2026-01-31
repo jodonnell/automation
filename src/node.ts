@@ -37,70 +37,25 @@ const createBox = (
 
 const getChildren = (spec: NodeSpec) => spec.children ?? []
 
-const hashString = (value: string) => {
-  let hash = 2166136261
-  for (let i = 0; i < value.length; i += 1) {
-    hash ^= value.charCodeAt(i)
-    hash = Math.imul(hash, 16777619)
-  }
-  return hash >>> 0
-}
-
-const createSeededRandom = (seed: number) => {
-  let state = seed || 1
-  return () => {
-    state += 0x6d2b79f5
-    let t = state
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
 export const createNode = (
   spec: NodeSpec,
   width: number,
   height: number,
-  layout?: NodeLayout,
+  layout: NodeLayout,
 ): NodeContainer => {
   const node = new Container() as NodeContainer
   node.nodeWidth = width
   node.nodeHeight = height
   node.connectionLayer = new Container()
+  node.incomingLayer = new Container()
   node.specId = spec.id
 
   const base = Math.min(width, height)
   const gap = base * 0.08
-  const boxSize = layout?.boxSize ?? (base - gap * 4) / 3
-  const padding = gap
-  const minX = padding
-  const minY = padding
-  const maxX = width - padding - boxSize
-  const maxY = height - padding - boxSize
-
-  const placed: { x: number; y: number }[] = []
-  const overlaps = (x: number, y: number) =>
-    placed.some((p) => {
-      return (
-        x < p.x + boxSize &&
-        x + boxSize > p.x &&
-        y < p.y + boxSize &&
-        y + boxSize > p.y
-      )
-    })
-
-  const rng = createSeededRandom(hashString(`${spec.id}-${width}x${height}`))
-  const pickSpot = () => {
-    const maxAttempts = 200
-    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      const x = minX + rng() * (maxX - minX)
-      const y = minY + rng() * (maxY - minY)
-      if (!overlaps(x, y)) return { x, y }
-    }
-    return null
-  }
+  const boxSize = layout.boxSize
 
   node.addChild(node.connectionLayer)
+  node.addChild(node.incomingLayer)
 
   const children = getChildren(spec)
   children.forEach((child, index) => {
@@ -110,15 +65,12 @@ export const createNode = (
       child.id,
       getChildren(child).length > 0,
     )
-    const stored = layout?.positions.get(child.id)
-    const spot = stored ?? pickSpot()
-    if (spot) {
-      placed.push(spot)
-      box.position.set(spot.x, spot.y)
+    const stored = layout.positions.get(child.id)
+    if (stored) {
+      box.position.set(stored.x, stored.y)
     } else {
       const fallbackX = gap + index * (boxSize + gap)
       const fallbackY = (height - boxSize) / 2
-      placed.push({ x: fallbackX, y: fallbackY })
       box.position.set(fallbackX, fallbackY)
     }
     node.addChild(box)

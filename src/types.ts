@@ -5,6 +5,7 @@ export type NodeContainer = Container & {
   nodeWidth: number
   nodeHeight: number
   connectionLayer: Container
+  incomingLayer: Container
   specId: string
 }
 
@@ -24,6 +25,11 @@ export type ConnectionPath = {
   fromId: string
   toId: string
   points: PointData[]
+}
+
+export type IncomingStub = {
+  start: PointData
+  end: PointData
 }
 
 export type NodeLayout = {

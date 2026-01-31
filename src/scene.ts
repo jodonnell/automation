@@ -3,13 +3,10 @@ import { createCameraController } from "./cameraController"
 import { setupInteractions } from "./interactions"
 import { createNodeManager } from "./nodeManager"
 import { NODE_TREE } from "./nodeSpec"
-import {
-  centerBoundsAtScale,
-  focusBounds,
-  worldBoundsToLocal,
-} from "./sceneMath"
+import { centerBoundsAtScale, worldBoundsToLocal } from "./sceneMath"
 import type { Bounds, NodeSpec } from "./types"
 import { createGameModel } from "./model"
+import { setupDebug } from "./debug"
 
 export const init = async (): Promise<void> => {
   const app = new Application()
@@ -42,6 +39,16 @@ export const init = async (): Promise<void> => {
   )
   const cameraController = createCameraController(camera)
 
+  if (import.meta.env.DEV) {
+    setupDebug({
+      app,
+      camera,
+      model,
+      nodeManager,
+      cameraController,
+    })
+  }
+
   const nodeSpecIndex = new Map<string, NodeSpec>()
   const indexSpecs = (spec: NodeSpec) => {
     nodeSpecIndex.set(spec.id, spec)
@@ -52,15 +59,12 @@ export const init = async (): Promise<void> => {
   const getCenteredTransform = (bounds: Bounds, scale: number) =>
     centerBoundsAtScale(bounds, app.renderer.width, app.renderer.height, scale)
 
-  const getFocusedTransform = (bounds: Bounds) =>
-    focusBounds(bounds, app.renderer.width, app.renderer.height)
-
   const worldBoundsToCameraLocal = (bounds: Bounds) =>
     worldBoundsToLocal(bounds, (x, y) =>
       camera.worldTransform.applyInverse(new Point(x, y)),
     )
 
-  setupInteractions({
+  const { rebindBoxes } = setupInteractions({
     camera,
     stage: app.stage,
     screen: app.screen,
@@ -69,16 +73,29 @@ export const init = async (): Promise<void> => {
     cameraController,
     getNodeSize,
     getCenteredTransform,
-    getFocusedTransform,
     worldBoundsToCameraLocal,
     resolveSpecForBox: (box) => nodeSpecIndex.get(box.name ?? "") ?? null,
   })
 
   app.ticker.add(cameraController.tick)
 
-  window.addEventListener("resize", () => {
+  const refreshLayout = () => {
+    const { width, height } = getNodeSize()
+    const currentSpec = nodeSpecIndex.get(nodeManager.current.specId)
+    if (currentSpec) {
+      const nextNode = nodeManager.getOrCreateNode(currentSpec, width, height)
+      if (nextNode !== nodeManager.current) {
+        camera.removeChild(nodeManager.current)
+        nodeManager.current = nextNode
+        camera.addChild(nextNode)
+        rebindBoxes()
+      }
+    }
     nodeManager.positionCurrent()
-  })
+  }
+
+  window.addEventListener("resize", refreshLayout)
+  requestAnimationFrame(refreshLayout)
 }
 
 export const test = init

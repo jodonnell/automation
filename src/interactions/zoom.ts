@@ -34,11 +34,6 @@ type ZoomDeps = {
     bounds: Bounds,
     scale: number,
   ) => { x: number; y: number; scale: number }
-  getFocusedTransform: (bounds: Bounds) => {
-    x: number
-    y: number
-    scale: number
-  }
   worldBoundsToCameraLocal: (bounds: Bounds) => Bounds
   resolveSpecForBox: (box: BoxContainer) => NodeSpec | null
   onRebindBoxes: () => void
@@ -51,7 +46,6 @@ export const createZoomInteractions = ({
   cameraController,
   getNodeSize,
   getCenteredTransform,
-  getFocusedTransform,
   worldBoundsToCameraLocal,
   resolveSpecForBox,
   onRebindBoxes,
@@ -70,13 +64,17 @@ export const createZoomInteractions = ({
     nextNode.alpha = 1
 
     const bounds = box.getBounds()
-    const target = getFocusedTransform(bounds)
     const localBounds = worldBoundsToCameraLocal(bounds)
 
     const startScale = Math.min(
       localBounds.width / nextNode.nodeWidth,
       localBounds.height / nextNode.nodeHeight,
     )
+    const target = {
+      x: -localBounds.x * (1 / startScale),
+      y: -localBounds.y * (1 / startScale),
+      scale: 1 / startScale,
+    }
     nextNode.scale.set(startScale)
     nextNode.position.set(localBounds.x, localBounds.y)
 
