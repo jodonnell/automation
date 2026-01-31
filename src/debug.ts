@@ -39,6 +39,8 @@ export const setupDebug = ({
   nodeManager,
   cameraController,
 }: DebugDeps) => {
+  if (typeof document?.createElement !== "function") return
+
   ;(window as typeof window & { game?: unknown }).game = {
     app,
     camera,

@@ -15,15 +15,6 @@ export const centerBoundsAtScale = (
   }
 }
 
-export const focusBounds = (
-  bounds: Bounds,
-  viewWidth: number,
-  viewHeight: number,
-) => {
-  const scale = Math.min(viewWidth / bounds.width, viewHeight / bounds.height)
-  return centerBoundsAtScale(bounds, viewWidth, viewHeight, scale)
-}
-
 export const worldBoundsToLocal = (
   bounds: Bounds,
   applyInverse: (x: number, y: number) => { x: number; y: number },

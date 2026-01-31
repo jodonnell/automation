@@ -74,7 +74,10 @@ export const createDragInteractions = ({
     return line
   }
 
-  const updatePathPoints = (state: DragState, point: { x: number; y: number }) => {
+  const updatePathPoints = (
+    state: DragState,
+    point: { x: number; y: number },
+  ) => {
     const lastPoint = state.points[state.points.length - 1]
     const distance = lastPoint
       ? Math.hypot(point.x - lastPoint.x, point.y - lastPoint.y)
@@ -99,7 +102,10 @@ export const createDragInteractions = ({
     )
   }
 
-  const getBoxEdgePoint = (box: BoxContainer, toward: { x: number; y: number }) => {
+  const getBoxEdgePoint = (
+    box: BoxContainer,
+    toward: { x: number; y: number },
+  ) => {
     const center = getBoxCenter(box)
     const dx = toward.x - center.x
     const dy = toward.y - center.y
@@ -208,7 +214,8 @@ export const createDragInteractions = ({
     const targetBox = getBoxAtLocalPoint(localPoint)
     const startBox = state.startBox
     const droppedOnOther = targetBox && targetBox !== startBox
-    const moved = (state.moved && Boolean(state.line)) || Boolean(droppedOnOther)
+    const moved =
+      (state.moved && Boolean(state.line)) || Boolean(droppedOnOther)
     const startAnchor =
       state.startAnchor ?? getBoxEdgePoint(startBox, localPoint)
     if (droppedOnOther) {
@@ -235,7 +242,10 @@ export const createDragInteractions = ({
         })
         const targetSpec = resolveSpecForBox(targetBox)
         if (targetSpec) {
-          model.addIncomingStub(targetSpec.id, buildIncomingStub(targetBox, endAnchor))
+          model.addIncomingStub(
+            targetSpec.id,
+            buildIncomingStub(targetBox, endAnchor),
+          )
         }
       }
       dragState = null

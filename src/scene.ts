@@ -95,7 +95,17 @@ export const init = async (): Promise<void> => {
   }
 
   window.addEventListener("resize", refreshLayout)
-  requestAnimationFrame(refreshLayout)
+  const raf =
+    typeof window.requestAnimationFrame === "function"
+      ? window.requestAnimationFrame
+      : (callback: FrameRequestCallback) => {
+          if (typeof globalThis.setTimeout === "function") {
+            return globalThis.setTimeout(() => callback(0), 0)
+          }
+          callback(0)
+          return 0
+        }
+  raf(refreshLayout)
 }
 
 export const test = init

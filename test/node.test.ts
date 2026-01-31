@@ -4,6 +4,7 @@ import { createPixiMock } from "./helpers/pixiMock"
 vi.mock("pixi.js", () => createPixiMock())
 
 import { createNode } from "../src/node"
+import { computeLayout } from "../src/layout"
 import type { NodeSpec } from "../src/types"
 
 const nonOverlapping = (a: { x: number; y: number; size: number }, b: { x: number; y: number; size: number }) => {
@@ -28,8 +29,10 @@ describe("createNode", () => {
         { id: "c", label: "C" },
       ],
     }
-    const node = createNode(spec, width, height)
-    expect(node.children.length).toBe(3)
+    const layout = computeLayout(spec, width, height)
+    const node = createNode(spec, width, height, layout)
+    const boxes = node.children.filter((child: any) => "boxSize" in child)
+    expect(boxes.length).toBe(3)
 
     const base = Math.min(width, height)
     const gap = base * 0.08
@@ -39,7 +42,7 @@ describe("createNode", () => {
     const maxX = width - gap - boxSize
     const maxY = height - gap - boxSize
 
-    const positions = node.children.map((child: any) => ({
+    const positions = boxes.map((child: any) => ({
       x: child.position.x,
       y: child.position.y,
       size: boxSize,
@@ -70,12 +73,15 @@ describe("createNode", () => {
       ],
     }
 
-    const first = createNode(spec, width, height)
-    const second = createNode(spec, width, height)
+    const layout = computeLayout(spec, width, height)
+    const first = createNode(spec, width, height, layout)
+    const second = createNode(spec, width, height, layout)
 
-    first.children.forEach((child, index) => {
+    const firstBoxes = first.children.filter((child: any) => "boxSize" in child)
+    const secondBoxes = second.children.filter((child: any) => "boxSize" in child)
+    firstBoxes.forEach((child: any, index: number) => {
       const firstPos = (child as { position: { x: number; y: number } }).position
-      const secondPos = (second.children[index] as { position: { x: number; y: number } }).position
+      const secondPos = (secondBoxes[index] as { position: { x: number; y: number } }).position
       expect(firstPos.x).toBeCloseTo(secondPos.x, 6)
       expect(firstPos.y).toBeCloseTo(secondPos.y, 6)
     })

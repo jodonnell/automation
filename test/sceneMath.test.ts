@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest"
 import {
   centerBoundsAtScale,
   computeOuterAlpha,
-  focusBounds,
   lerpCameraTransform,
   worldBoundsToLocal,
 } from "../src/sceneMath"
@@ -15,12 +14,6 @@ describe("sceneMath", () => {
     expect(result.scale).toBe(2)
     expect(result.x).toBe(400 - (10 + 50) * 2)
     expect(result.y).toBe(300 - (20 + 100) * 2)
-  })
-
-  it("focuses bounds based on view", () => {
-    const result = focusBounds(bounds, 800, 600)
-    const expectedScale = Math.min(800 / 100, 600 / 200)
-    expect(result.scale).toBe(expectedScale)
   })
 
   it("converts world bounds to local using inverse transform", () => {
