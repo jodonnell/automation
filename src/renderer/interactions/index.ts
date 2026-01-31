@@ -40,6 +40,8 @@ type InteractionDeps = {
   ) => { x: number; y: number; scale: number }
   worldBoundsToCameraLocal: (bounds: Bounds) => Bounds
   resolveSpecForBox: (box: BoxContainer) => NodeSpec | null
+  isDeleteableBox?: (box: BoxContainer) => boolean
+  onDeleteBox?: (box: BoxContainer) => void
 }
 
 export const setupInteractions = ({
@@ -53,6 +55,8 @@ export const setupInteractions = ({
   getCenteredTransform,
   worldBoundsToCameraLocal,
   resolveSpecForBox,
+  isDeleteableBox,
+  onDeleteBox,
 }: InteractionDeps) => {
   let handleDoubleClickBox: (box: BoxContainer) => void = () => {}
   const drag = createDragInteractions({
@@ -61,6 +65,8 @@ export const setupInteractions = ({
     cameraController,
     resolveSpecForBox,
     onDoubleClick: (box) => handleDoubleClickBox(box),
+    isDeleteableBox,
+    onDeleteBox,
   })
 
   const zoom = createZoomInteractions({

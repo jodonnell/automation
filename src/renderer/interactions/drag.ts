@@ -18,6 +18,8 @@ type DragDeps = {
   cameraController: CameraController
   resolveSpecForBox: (box: BoxContainer) => NodeSpec | null
   onDoubleClick: (box: BoxContainer) => void
+  isDeleteableBox?: (box: BoxContainer) => boolean
+  onDeleteBox?: (box: BoxContainer) => void
 }
 
 type DragLineState = {
@@ -30,6 +32,8 @@ export const createDragInteractions = ({
   cameraController,
   resolveSpecForBox,
   onDoubleClick,
+  isDeleteableBox,
+  onDeleteBox,
 }: DragDeps) => {
   const state = createDragStateMachine({ doubleClickMs: DOUBLE_CLICK_MS })
   const lineState: DragLineState = { line: null }
@@ -132,6 +136,17 @@ export const createDragInteractions = ({
       box.cursor = "pointer"
       box.on("pointerdown", (event) => {
         const button = (event as { button?: number }).button
+        if (button === 2 && isDeleteableBox?.(box)) {
+          const stoppable = event as {
+            stopPropagation?: () => void
+            preventDefault?: () => void
+          }
+          stoppable.stopPropagation?.()
+          stoppable.preventDefault?.()
+          clearDrag()
+          onDeleteBox?.(box)
+          return
+        }
         if (button !== 0 || cameraController.isTweening) return
         clearDrag()
         const localPoint = getLocalPointFromEvent(event)

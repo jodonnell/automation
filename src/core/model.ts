@@ -11,6 +11,7 @@ export type GameModel = {
   getConnections: (specId: string) => ConnectionPath[]
   addConnection: (specId: string, connection: ConnectionPath) => void
   removeConnection: (specId: string, connection: ConnectionPath) => void
+  removeConnectionsForBox: (specId: string, boxId: string) => void
   getIncomingStubs: (specId: string) => IncomingStub[]
   addIncomingStub: (specId: string, stub: IncomingStub) => void
   removeIncomingStub: (specId: string, stub: IncomingStub) => void
@@ -55,6 +56,40 @@ export const createGameModel = (): GameModel => {
     graphListeners.forEach((listener) => listener(specId))
   }
 
+  const removeConnectionsForBox = (specId: string, boxId: string) => {
+    const list = connections.get(specId)
+    if (!list) return
+    const remaining: ConnectionPath[] = []
+    let removed = false
+    list.forEach((connection) => {
+      if (connection.fromId === boxId || connection.toId === boxId) {
+        removed = true
+        if (connection.incomingStub) {
+          const stubs = incomingStubs.get(connection.toId)
+          if (stubs) {
+            const nextStubs = stubs.filter(
+              (stub) => stub !== connection.incomingStub,
+            )
+            if (nextStubs.length > 0) {
+              incomingStubs.set(connection.toId, nextStubs)
+            } else {
+              incomingStubs.delete(connection.toId)
+            }
+          }
+        }
+      } else {
+        remaining.push(connection)
+      }
+    })
+    if (!removed) return
+    if (remaining.length > 0) {
+      connections.set(specId, remaining)
+    } else {
+      connections.delete(specId)
+    }
+    graphListeners.forEach((listener) => listener(specId))
+  }
+
   const getIncomingStubs = (specId: string) => incomingStubs.get(specId) ?? []
 
   const addIncomingStub = (specId: string, stub: IncomingStub) => {
@@ -92,6 +127,7 @@ export const createGameModel = (): GameModel => {
     getConnections,
     addConnection,
     removeConnection,
+    removeConnectionsForBox,
     getIncomingStubs,
     addIncomingStub,
     removeIncomingStub,

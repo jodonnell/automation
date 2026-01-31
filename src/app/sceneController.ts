@@ -6,7 +6,7 @@ import { centerBoundsAtScale, worldBoundsToLocal } from "../core/sceneMath"
 import { createGameModel } from "../core/model"
 import { setupDebug } from "../debug"
 import { renderConnections } from "../renderer/connectionRenderer"
-import { createConverterSpawner } from "./converterSpawner"
+import { createPlaceableManager } from "../features/placeables/manager"
 import type { Bounds, NodeSpec } from "../core/types"
 import type { Application } from "pixi.js"
 
@@ -80,7 +80,16 @@ export const createSceneController = ({
       camera.worldTransform.applyInverse(new Point(x, y)),
     )
 
-  const { rebindBoxes } = setupInteractions({
+  let rebindBoxes: () => void = () => {}
+  const placeableManager = createPlaceableManager({
+    stage: app.stage,
+    window,
+    nodeManager,
+    model,
+    onRebindBoxes: () => rebindBoxes(),
+  })
+
+  const interactions = setupInteractions({
     camera,
     stage: app.stage,
     screen: app.screen,
@@ -91,14 +100,10 @@ export const createSceneController = ({
     getCenteredTransform,
     worldBoundsToCameraLocal,
     resolveSpecForBox: (box) => nodeSpecIndex.get(box.name ?? "") ?? null,
+    isDeleteableBox: placeableManager.isDeleteableBox,
+    onDeleteBox: placeableManager.deleteBox,
   })
-  const converterSpawner = createConverterSpawner({
-    stage: app.stage,
-    window,
-    nodeManager,
-    model,
-    onRebindBoxes: rebindBoxes,
-  })
+  rebindBoxes = interactions.rebindBoxes
 
   app.ticker.add((ticker) => {
     cameraController.tick()
@@ -125,7 +130,7 @@ export const createSceneController = ({
       event.preventDefault()
     })
 
-    converterSpawner.attach()
+    placeableManager.attach()
     window.addEventListener("resize", refreshLayout)
     const raf =
       typeof window.requestAnimationFrame === "function"

@@ -8,10 +8,10 @@ import { computeLayout } from "../src/core/layout"
 import { createGameModel } from "../src/core/model"
 import { createNode } from "../src/renderer/nodeRenderer"
 import { createConverter } from "../src/renderer/converterRenderer"
-import { createConverterSpawner } from "../src/app/converterSpawner"
+import { createPlaceableManager } from "../src/features/placeables/manager"
+import { createDragInteractions } from "../src/renderer/interactions/drag"
 import type { NodeManager } from "../src/nodeManager"
 import type { NodeSpec } from "../src/core/types"
-import type { NodeContainer } from "../src/renderer/types"
 
 const buildNode = () => {
   const spec: NodeSpec = {
@@ -40,7 +40,7 @@ describe("createConverter", () => {
   })
 })
 
-describe("createConverterSpawner", () => {
+describe("placeable manager", () => {
   it("adds a smaller converter at the pointer position on key 1", () => {
     const stage = new Container()
     const node = buildNode()
@@ -58,14 +58,14 @@ describe("createConverterSpawner", () => {
     const model = createGameModel()
     const nodeManager = { current: node } as NodeManager
 
-    const spawner = createConverterSpawner({
+    const manager = createPlaceableManager({
       stage,
       window: windowStub as unknown as Window,
       nodeManager,
       model,
       onRebindBoxes: rebindBoxes,
     })
-    spawner.attach()
+    manager.attach()
 
     const pointerMove = (stage as unknown as { _listeners: Record<string, any> })
       ._listeners.pointermove
@@ -118,14 +118,14 @@ describe("createConverterSpawner", () => {
     }
     const nodeManager = { current: node } as NodeManager
 
-    const spawner = createConverterSpawner({
+    const manager = createPlaceableManager({
       stage,
       window: windowStub as unknown as Window,
       nodeManager,
       model,
       onRebindBoxes: vi.fn(),
     })
-    spawner.attach()
+    manager.attach()
 
     const pointerMove = (stage as unknown as { _listeners: Record<string, any> })
       ._listeners.pointermove
@@ -168,5 +168,61 @@ describe("createConverterSpawner", () => {
         String(child.name ?? "").startsWith("converter"),
       ),
     ).toBe(false)
+  })
+
+  it("removes a converter on right click", () => {
+    const node = buildNode()
+    const model = createGameModel()
+    const nodeManager = { current: node } as NodeManager
+    const manager = createPlaceableManager({
+      stage: new Container(),
+      window: { addEventListener: vi.fn() } as unknown as Window,
+      nodeManager,
+      model,
+      onRebindBoxes: vi.fn(),
+    })
+    const converter = createConverter(40, "1/a", "converter-0")
+    converter.position.set(120, 120)
+    node.addChild(converter)
+    node.boxLabels.set("converter-0", "1/a")
+
+    model.addConnection(node.specId, {
+      fromId: "converter-0",
+      toId: "root-A",
+      points: [
+        { x: 130, y: 130 },
+        { x: 200, y: 200 },
+      ],
+      incomingStub: { start: { x: 200, y: 200 }, end: { x: 230, y: 200 } },
+    })
+
+    const drag = createDragInteractions({
+      nodeManager,
+      model,
+      cameraController: { isTweening: false },
+      resolveSpecForBox: () => null,
+      onDoubleClick: vi.fn(),
+      isDeleteableBox: manager.isDeleteableBox,
+      onDeleteBox: manager.deleteBox,
+    })
+
+    drag.bindBoxHandlers(node)
+    const event = {
+      button: 2,
+      stopPropagation: vi.fn(),
+      preventDefault: vi.fn(),
+    }
+    ;(converter as unknown as { _listeners: Record<string, any> })._listeners
+      .pointerdown(event)
+
+    const remaining = node.children.filter(
+      (child: any) => "boxSize" in child,
+    )
+    expect(
+      remaining.some((child: any) =>
+        String(child.name ?? "").startsWith("converter"),
+      ),
+    ).toBe(false)
+    expect(model.getConnections(node.specId)).toHaveLength(0)
   })
 })
