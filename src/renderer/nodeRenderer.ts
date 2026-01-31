@@ -14,7 +14,8 @@ const createBox = (
 
   const shape = new Graphics()
   shape.rect(0, 0, size, size)
-  shape.stroke({ width: 3, color: 0x111111 })
+  shape.fill(0xfff7eb)
+  shape.stroke({ width: 3, color: 0x1f1b16 })
   box.addChild(shape)
 
   const text = new Text({
@@ -22,7 +23,7 @@ const createBox = (
     style: {
       fontFamily: "Georgia, serif",
       fontSize: Math.max(28, Math.floor(size * 0.4)),
-      fill: 0x111111,
+      fill: 0x1f1b16,
     },
   })
   text.anchor.set(0.5)

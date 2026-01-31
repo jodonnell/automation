@@ -85,7 +85,7 @@ export const renderConnections = (
         style: FLOW_TEXT_STYLE,
       })
       glyph.anchor.set(0.5)
-      glyph.alpha = 0.7
+      glyph.alpha = 0.95
       node.flowLayer.addChild(glyph)
       glyphs.push(glyph)
     }
