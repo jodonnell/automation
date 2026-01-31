@@ -14,3 +14,7 @@ export const FLOW_TEXT_STYLE = {
   strokeThickness: 2,
   dropShadow: false,
 }
+export const CONVERTER_LABEL = "1/a"
+export const CONVERTER_SCALE = 0.5
+export const CONVERTER_MIN_SIZE = 24
+export const CONVERTER_CLEARANCE = 6

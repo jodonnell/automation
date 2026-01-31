@@ -6,6 +6,7 @@ import { centerBoundsAtScale, worldBoundsToLocal } from "../core/sceneMath"
 import { createGameModel } from "../core/model"
 import { setupDebug } from "../debug"
 import { renderConnections } from "../renderer/connectionRenderer"
+import { createConverterSpawner } from "./converterSpawner"
 import type { Bounds, NodeSpec } from "../core/types"
 import type { Application } from "pixi.js"
 
@@ -91,6 +92,13 @@ export const createSceneController = ({
     worldBoundsToCameraLocal,
     resolveSpecForBox: (box) => nodeSpecIndex.get(box.name ?? "") ?? null,
   })
+  const converterSpawner = createConverterSpawner({
+    stage: app.stage,
+    window,
+    nodeManager,
+    model,
+    onRebindBoxes: rebindBoxes,
+  })
 
   app.ticker.add((ticker) => {
     cameraController.tick()
@@ -117,6 +125,7 @@ export const createSceneController = ({
       event.preventDefault()
     })
 
+    converterSpawner.attach()
     window.addEventListener("resize", refreshLayout)
     const raf =
       typeof window.requestAnimationFrame === "function"

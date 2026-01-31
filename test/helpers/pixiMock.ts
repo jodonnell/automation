@@ -40,6 +40,10 @@ export const createPixiMock = () => {
       applyInverse: (point: Point) => new Point(point.x, point.y),
     }
 
+    toLocal(point: Point): Point {
+      return new Point(point.x - this.position.x, point.y - this.position.y)
+    }
+
     addChild<T>(child: T): T {
       this.children.push(child)
       return child
@@ -74,11 +78,16 @@ export const createPixiMock = () => {
 
   class Graphics extends Container {
     lastRect?: { x: number; y: number; width: number; height: number }
+    lastCircle?: { x: number; y: number; radius: number }
     lastStroke?: unknown
     lastFill?: unknown
 
     rect(x: number, y: number, width: number, height: number): void {
       this.lastRect = { x, y, width, height }
+    }
+
+    circle(x: number, y: number, radius: number): void {
+      this.lastCircle = { x, y, radius }
     }
 
     stroke(style: unknown): void {
