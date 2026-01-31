@@ -1,9 +1,10 @@
 import { Graphics, Point } from "pixi.js"
 import { CONNECTION_STYLE, DOUBLE_CLICK_MS } from "../constants"
 import { drawSmoothPath } from "../path"
-import type { GameModel } from "../model"
+import type { GameModel } from "../core/model"
 import type { NodeManager } from "../nodeManager"
-import type { BoxContainer, NodeContainer, NodeSpec, PointData } from "../types"
+import type { NodeSpec, PointData } from "../core/types"
+import type { BoxContainer, NodeContainer } from "../renderer/types"
 
 type CameraController = {
   readonly isTweening: boolean

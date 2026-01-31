@@ -1,5 +1,5 @@
 import type { Container } from "pixi.js"
-import type { Tween } from "./types"
+import type { Tween } from "./core/types"
 import { easeInOutCubic } from "./easing"
 import { lerpCameraTransform } from "./sceneMath"
 

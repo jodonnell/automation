@@ -1,8 +1,9 @@
 import { createDragInteractions } from "./drag"
 import { createZoomInteractions } from "./zoom"
-import type { GameModel } from "../model"
+import type { GameModel } from "../core/model"
 import type { NodeManager } from "../nodeManager"
-import type { Bounds, BoxContainer, NodeSpec } from "../types"
+import type { Bounds, NodeSpec } from "../core/types"
+import type { BoxContainer } from "../renderer/types"
 
 type CameraController = {
   readonly isTweening: boolean

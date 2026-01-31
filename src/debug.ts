@@ -1,5 +1,5 @@
 import type { Application, Container } from "pixi.js"
-import type { GameModel } from "./model"
+import type { GameModel } from "./core/model"
 import type { NodeManager } from "./nodeManager"
 
 type DebugDeps = {

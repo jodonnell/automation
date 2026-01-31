@@ -1,4 +1,4 @@
-import type { Bounds } from "./types"
+import type { Bounds } from "./core/types"
 
 export const centerBoundsAtScale = (
   bounds: Bounds,

@@ -1,4 +1,4 @@
-import type { NodeSpec } from "./types"
+import type { NodeSpec } from "./core/types"
 
 export const NODE_TREE: NodeSpec = {
   id: "root",

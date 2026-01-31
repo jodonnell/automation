@@ -1,4 +1,9 @@
-import type { ConnectionPath, IncomingStub, NodeLayout, NodeSpec } from "./types"
+import type {
+  ConnectionPath,
+  IncomingStub,
+  NodeLayout,
+  NodeSpec,
+} from "./types"
 import { computeLayout } from "./layout"
 
 export type GameModel = {

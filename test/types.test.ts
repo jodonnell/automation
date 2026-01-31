@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import "../src/types"
+import "../src/core/types"
 
 describe("types module", () => {
   it("loads without runtime exports", () => {

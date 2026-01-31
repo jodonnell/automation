@@ -4,8 +4,8 @@ import { createPixiMock } from "./helpers/pixiMock"
 vi.mock("pixi.js", () => createPixiMock())
 
 import { createNode } from "../src/node"
-import { computeLayout } from "../src/layout"
-import type { NodeSpec } from "../src/types"
+import { computeLayout } from "../src/core/layout"
+import type { NodeSpec } from "../src/core/types"
 
 const nonOverlapping = (a: { x: number; y: number; size: number }, b: { x: number; y: number; size: number }) => {
   return !(

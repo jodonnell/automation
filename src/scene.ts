@@ -4,8 +4,8 @@ import { setupInteractions } from "./interactions"
 import { createNodeManager } from "./nodeManager"
 import { NODE_TREE } from "./nodeSpec"
 import { centerBoundsAtScale, worldBoundsToLocal } from "./sceneMath"
-import type { Bounds, NodeSpec } from "./types"
-import { createGameModel } from "./model"
+import type { Bounds, NodeSpec } from "./core/types"
+import { createGameModel } from "./core/model"
 import { setupDebug } from "./debug"
 
 export const init = async (): Promise<void> => {

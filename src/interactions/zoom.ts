@@ -6,7 +6,8 @@ import {
 } from "../constants"
 import { computeOuterAlpha } from "../sceneMath"
 import type { NodeManager } from "../nodeManager"
-import type { Bounds, BoxContainer, NodeSpec } from "../types"
+import type { Bounds, NodeSpec } from "../core/types"
+import type { BoxContainer } from "../renderer/types"
 
 type CameraController = {
   readonly isTweening: boolean

@@ -1,5 +1,5 @@
 import type { Graphics } from "pixi.js"
-import type { PointData } from "./types"
+import type { PointData } from "./core/types"
 
 export type StrokeStyle = {
   width: number

@@ -1,8 +1,9 @@
 import type { Container } from "pixi.js"
 import { renderConnections } from "./connectionRender"
 import { createNode } from "./node"
-import type { GameModel } from "./model"
-import type { NodeContainer, NodeSpec } from "./types"
+import type { GameModel } from "./core/model"
+import type { NodeSpec } from "./core/types"
+import type { NodeContainer } from "./renderer/types"
 
 export type NodeManager = {
   current: NodeContainer
