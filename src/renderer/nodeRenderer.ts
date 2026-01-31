@@ -48,14 +48,17 @@ export const createNode = (
   node.nodeWidth = width
   node.nodeHeight = height
   node.connectionLayer = new Container()
+  node.flowLayer = new Container()
   node.incomingLayer = new Container()
   node.specId = spec.id
+  node.boxLabels = new Map()
 
   const base = Math.min(width, height)
   const gap = base * 0.08
   const boxSize = layout.boxSize
 
   node.addChild(node.connectionLayer)
+  node.addChild(node.flowLayer)
   node.addChild(node.incomingLayer)
 
   const children = getChildren(spec)
@@ -66,6 +69,7 @@ export const createNode = (
       child.id,
       getChildren(child).length > 0,
     )
+    node.boxLabels.set(child.id, child.label)
     const stored = layout.positions.get(child.id)
     if (stored) {
       box.position.set(stored.x, stored.y)

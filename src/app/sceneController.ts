@@ -5,6 +5,7 @@ import { createNodeManager } from "../nodeManager"
 import { centerBoundsAtScale, worldBoundsToLocal } from "../core/sceneMath"
 import { createGameModel } from "../core/model"
 import { setupDebug } from "../debug"
+import { renderConnections } from "../renderer/connectionRenderer"
 import type { Bounds, NodeSpec } from "../core/types"
 import type { Application } from "pixi.js"
 
@@ -41,6 +42,15 @@ export const createSceneController = ({
     rootSpec,
     model,
   )
+  model.onGraphChanged((specId) => {
+    const current = nodeManager.current
+    if (current.specId !== specId) return
+    renderConnections(
+      current,
+      model.getConnections(specId),
+      model.getIncomingStubs(specId),
+    )
+  })
   const cameraController = createCameraController(camera)
 
   if (isDev) {
@@ -81,7 +91,10 @@ export const createSceneController = ({
     resolveSpecForBox: (box) => nodeSpecIndex.get(box.name ?? "") ?? null,
   })
 
-  app.ticker.add(cameraController.tick)
+  app.ticker.add((ticker) => {
+    cameraController.tick()
+    nodeManager.current.updateFlows?.(ticker.deltaMS)
+  })
 
   const refreshLayout = () => {
     const { width, height } = getNodeSize()

@@ -12,12 +12,14 @@ export type GameModel = {
   addConnection: (specId: string, connection: ConnectionPath) => void
   getIncomingStubs: (specId: string) => IncomingStub[]
   addIncomingStub: (specId: string, stub: IncomingStub) => void
+  onGraphChanged: (listener: (specId: string) => void) => () => void
 }
 
 export const createGameModel = (): GameModel => {
   const layouts = new Map<string, NodeLayout>()
   const connections = new Map<string, ConnectionPath[]>()
   const incomingStubs = new Map<string, IncomingStub[]>()
+  const graphListeners = new Set<(specId: string) => void>()
 
   const getLayout = (spec: NodeSpec, width: number, height: number) => {
     const key = `${spec.id}-${width}x${height}`
@@ -34,6 +36,7 @@ export const createGameModel = (): GameModel => {
     const list = connections.get(specId) ?? []
     list.push(connection)
     connections.set(specId, list)
+    graphListeners.forEach((listener) => listener(specId))
   }
 
   const getIncomingStubs = (specId: string) => incomingStubs.get(specId) ?? []
@@ -42,6 +45,7 @@ export const createGameModel = (): GameModel => {
     const list = incomingStubs.get(specId) ?? []
     list.push(stub)
     incomingStubs.set(specId, list)
+    graphListeners.forEach((listener) => listener(specId))
   }
 
   return {
@@ -50,5 +54,9 @@ export const createGameModel = (): GameModel => {
     addConnection,
     getIncomingStubs,
     addIncomingStub,
+    onGraphChanged: (listener) => {
+      graphListeners.add(listener)
+      return () => graphListeners.delete(listener)
+    },
   }
 }
