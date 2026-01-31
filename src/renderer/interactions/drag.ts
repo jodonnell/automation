@@ -95,6 +95,7 @@ export const createDragInteractions = ({
             fromId: action.fromId,
             toId: action.toId,
             points: action.points,
+            incomingStub: action.incomingStub,
           })
           const targetBox = nodeManager.current.children.find((child) => {
             const candidate = child as BoxContainer

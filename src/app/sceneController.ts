@@ -49,6 +49,7 @@ export const createSceneController = ({
       current,
       model.getConnections(specId),
       model.getIncomingStubs(specId),
+      (connection) => model.removeConnectionWithStub(specId, connection),
     )
   })
   const cameraController = createCameraController(camera)

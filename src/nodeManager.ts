@@ -40,6 +40,7 @@ export const createNodeManager = (
         cached,
         model.getConnections(spec.id),
         model.getIncomingStubs(spec.id),
+        (connection) => model.removeConnectionWithStub(spec.id, connection),
       )
       return cached
     }
@@ -49,6 +50,7 @@ export const createNodeManager = (
       nextNode,
       model.getConnections(spec.id),
       model.getIncomingStubs(spec.id),
+      (connection) => model.removeConnectionWithStub(spec.id, connection),
     )
     nodeCache.set(spec.id, nextNode)
     return nextNode

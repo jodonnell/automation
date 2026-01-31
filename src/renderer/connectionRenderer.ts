@@ -60,6 +60,7 @@ export const renderConnections = (
   node: NodeContainer,
   connections: ConnectionPath[],
   incoming: IncomingStub[],
+  onConnectionRightClick?: (connection: ConnectionPath) => void,
 ) => {
   node.connectionLayer.removeChildren()
   node.flowLayer.removeChildren()
@@ -71,6 +72,21 @@ export const renderConnections = (
     if (connection.points.length < 2) return
     const line = new Graphics()
     drawSmoothPath(line, connection.points, CONNECTION_STYLE)
+    if (onConnectionRightClick) {
+      line.eventMode = "static"
+      line.cursor = "pointer"
+      line.on("pointerdown", (event) => {
+        const button = (event as { button?: number }).button
+        if (button !== 2) return
+        const stoppable = event as {
+          stopPropagation?: () => void
+          preventDefault?: () => void
+        }
+        stoppable.stopPropagation?.()
+        stoppable.preventDefault?.()
+        onConnectionRightClick(connection)
+      })
+    }
     node.connectionLayer.addChild(line)
 
     const label = node.boxLabels.get(connection.fromId)
@@ -111,7 +127,8 @@ export const renderConnections = (
         const advance = (deltaMs / 1000) * flow.speed
         flow.offset = (flow.offset + advance) % flow.path.length
         flow.glyphs.forEach((glyph, index) => {
-          const distance = (index * flow.spacing + flow.offset) % flow.path.length
+          const distance =
+            (index * flow.spacing + flow.offset) % flow.path.length
           const point = getPointAtDistance(flow.path, distance)
           glyph.position.set(point.x, point.y)
         })

@@ -14,6 +14,7 @@ export type ConnectionPath = {
   fromId: string
   toId: string
   points: PointData[]
+  incomingStub?: IncomingStub
 }
 
 export type IncomingStub = {

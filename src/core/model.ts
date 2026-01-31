@@ -10,8 +10,11 @@ export type GameModel = {
   getLayout: (spec: NodeSpec, width: number, height: number) => NodeLayout
   getConnections: (specId: string) => ConnectionPath[]
   addConnection: (specId: string, connection: ConnectionPath) => void
+  removeConnection: (specId: string, connection: ConnectionPath) => void
   getIncomingStubs: (specId: string) => IncomingStub[]
   addIncomingStub: (specId: string, stub: IncomingStub) => void
+  removeIncomingStub: (specId: string, stub: IncomingStub) => void
+  removeConnectionWithStub: (specId: string, connection: ConnectionPath) => void
   onGraphChanged: (listener: (specId: string) => void) => () => void
 }
 
@@ -39,6 +42,19 @@ export const createGameModel = (): GameModel => {
     graphListeners.forEach((listener) => listener(specId))
   }
 
+  const removeConnection = (specId: string, connection: ConnectionPath) => {
+    const list = connections.get(specId)
+    if (!list) return
+    const next = list.filter((item) => item !== connection)
+    if (next.length === list.length) return
+    if (next.length > 0) {
+      connections.set(specId, next)
+    } else {
+      connections.delete(specId)
+    }
+    graphListeners.forEach((listener) => listener(specId))
+  }
+
   const getIncomingStubs = (specId: string) => incomingStubs.get(specId) ?? []
 
   const addIncomingStub = (specId: string, stub: IncomingStub) => {
@@ -48,12 +64,38 @@ export const createGameModel = (): GameModel => {
     graphListeners.forEach((listener) => listener(specId))
   }
 
+  const removeIncomingStub = (specId: string, stub: IncomingStub) => {
+    const list = incomingStubs.get(specId)
+    if (!list) return
+    const next = list.filter((item) => item !== stub)
+    if (next.length === list.length) return
+    if (next.length > 0) {
+      incomingStubs.set(specId, next)
+    } else {
+      incomingStubs.delete(specId)
+    }
+    graphListeners.forEach((listener) => listener(specId))
+  }
+
+  const removeConnectionWithStub = (
+    specId: string,
+    connection: ConnectionPath,
+  ) => {
+    removeConnection(specId, connection)
+    if (connection.incomingStub) {
+      removeIncomingStub(connection.toId, connection.incomingStub)
+    }
+  }
+
   return {
     getLayout,
     getConnections,
     addConnection,
+    removeConnection,
     getIncomingStubs,
     addIncomingStub,
+    removeIncomingStub,
+    removeConnectionWithStub,
     onGraphChanged: (listener) => {
       graphListeners.add(listener)
       return () => graphListeners.delete(listener)
