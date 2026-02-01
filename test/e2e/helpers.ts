@@ -88,6 +88,21 @@ export const waitForConnection = async (page: Page) => {
   })
 }
 
+export const waitForCurrentSpec = async (page: Page, specId: string) => {
+  await page.waitForFunction((id) => {
+    const game = (window as GameWindow).game
+    return game?.nodeManager?.current?.specId === id
+  }, specId)
+}
+
+export const getConnectionCount = async (page: Page): Promise<number> =>
+  page.evaluate(() => {
+    const game = (window as GameWindow).game
+    const specId = game?.nodeManager?.current?.specId ?? ""
+    const connections = game?.model?.getConnections?.(specId) ?? []
+    return connections.length
+  })
+
 export const getRenderCounts = async (page: Page) =>
   page.evaluate(() => {
     const game = (window as GameWindow).game
