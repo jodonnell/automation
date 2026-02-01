@@ -283,7 +283,7 @@ test("combiner combines two letter inputs in order", async ({ page }) => {
   await page.keyboard.press("2")
   await waitForBoxWithPrefix(page, "combiner-")
 
-  const centers = await getBoxCenters(page, ["root-A", "root-T"])
+  const centers = await getBoxCenters(page, ["root-C", "root-A", "root-T"])
   const updatedBoxes = await getBoxes(page)
   const combiner = updatedBoxes.find((box) => box.id.startsWith("combiner-"))
   expect(combiner).toBeTruthy()
@@ -292,8 +292,28 @@ test("combiner combines two letter inputs in order", async ({ page }) => {
     y: origin.y + (combiner?.y ?? 0) + (combiner?.size ?? 0) / 2,
   }
 
-  await dragBetween(page, centers["root-A"], combinerCenter)
+  await page.evaluate(() => {
+    const game = (
+      window as {
+        game?: {
+          nodeManager?: { current?: { boxLabels?: Map<string, string> } }
+        }
+      }
+    ).game
+    game?.nodeManager?.current?.boxLabels?.set("root-C", "A")
+  })
+  await dragBetween(page, centers["root-C"], combinerCenter)
   await waitForConnection(page)
+  await page.evaluate(() => {
+    const game = (
+      window as {
+        game?: {
+          nodeManager?: { current?: { boxLabels?: Map<string, string> } }
+        }
+      }
+    ).game
+    game?.nodeManager?.current?.boxLabels?.set("root-C", "C")
+  })
   await dragBetween(page, centers["root-A"], combinerCenter)
   await waitForConnection(page)
   await dragBetween(page, combinerCenter, centers["root-T"])
@@ -318,5 +338,5 @@ test("combiner combines two letter inputs in order", async ({ page }) => {
     "root-T",
   )
   expect(flowTexts.length).toBeGreaterThan(0)
-  expect(flowTexts).toContain("aa")
+  expect(flowTexts).toContain("ca")
 })
