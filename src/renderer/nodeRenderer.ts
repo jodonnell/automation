@@ -1,6 +1,9 @@
 import { Container, Graphics, Rectangle, Text } from "pixi.js"
 import type { ConnectionPath, NodeLayout, NodeSpec } from "../core/types"
-import { getOutboundCapacityForLabel } from "../core/flowLabel"
+import {
+  getOutboundCapacityForLabel,
+  type OutboundCapacityResolver,
+} from "../core/flowLabel"
 import type { BoxContainer, NodeContainer } from "./types"
 
 const createBox = (
@@ -67,6 +70,7 @@ export const createNode = (
   node.connectionLayer = new Container()
   node.flowLayer = new Container()
   node.incomingLayer = new Container()
+  node.outgoingLayer = new Container()
   node.specId = spec.id
   node.boxLabels = new Map()
   node.resourceNodeIds = new Set()
@@ -78,6 +82,7 @@ export const createNode = (
   node.addChild(node.connectionLayer)
   node.addChild(node.flowLayer)
   node.addChild(node.incomingLayer)
+  node.addChild(node.outgoingLayer)
 
   const children = getChildren(spec)
   children.forEach((child, index) => {
@@ -106,6 +111,7 @@ export const createNode = (
 export const updateResourceNodeOutboundCounts = (
   node: NodeContainer,
   connections: ConnectionPath[],
+  getOutboundCapacityForNode?: OutboundCapacityResolver,
 ) => {
   const outboundCount = new Map<string, number>()
   connections.forEach((connection) => {
@@ -118,7 +124,9 @@ export const updateResourceNodeOutboundCounts = (
     if (!box.isResourceNode || !box.countText) return
     const id = typeof box.name === "string" ? box.name : ""
     const label = node.boxLabels.get(id) ?? ""
-    const capacity = getOutboundCapacityForLabel(label)
+    const capacity = getOutboundCapacityForNode
+      ? getOutboundCapacityForNode(id, label)
+      : getOutboundCapacityForLabel(label)
     const used = outboundCount.get(id) ?? 0
     const remaining = Math.max(0, capacity - used)
     box.countText.text = String(remaining)

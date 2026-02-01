@@ -42,6 +42,127 @@ describe("createGameModel", () => {
     expect(model.getIncomingStubs(specId)).toHaveLength(0)
   })
 
+  it("removes outgoing stubs when deleting a source box", () => {
+    const model = createGameModel()
+    const specId = "root"
+    const stub = {
+      id: "outgoing-0",
+      label: "B",
+      sourceId: "box-b",
+      start: { x: 10, y: 10 },
+      end: { x: 30, y: 10 },
+      points: [
+        { x: 10, y: 10 },
+        { x: 30, y: 10 },
+      ],
+    }
+
+    model.addOutgoingStub(specId, stub)
+    model.removeConnectionsForBox(specId, "box-b")
+
+    expect(model.getOutgoingStubs(specId)).toHaveLength(0)
+  })
+
+  it("removes one outgoing stub when a connection is removed", () => {
+    const model = createGameModel()
+    const specId = "root"
+    const connection = {
+      fromId: "node-a",
+      toId: "node-b",
+      points: [
+        { x: 0, y: 0 },
+        { x: 10, y: 0 },
+      ],
+    }
+    model.addConnection(specId, connection)
+    model.addOutgoingStub(specId, {
+      id: "outgoing-0",
+      label: "B",
+      sourceId: "node-a",
+      start: { x: 10, y: 10 },
+      end: { x: 30, y: 10 },
+      points: [
+        { x: 10, y: 10 },
+        { x: 30, y: 10 },
+      ],
+    })
+
+    model.removeConnection(specId, connection)
+
+    expect(model.getOutgoingStubs(specId)).toHaveLength(1)
+  })
+
+  it("removes outgoing stubs when incoming stub connections are removed", () => {
+    const model = createGameModel()
+    const specId = "root"
+    const stubId = `${INCOMING_STUB_PREFIX}0`
+    const stub = {
+      id: stubId,
+      label: "A",
+      sourceId: "root-A",
+      start: { x: 10, y: 10 },
+      end: { x: 20, y: 10 },
+    }
+    model.addIncomingStub(specId, stub)
+    model.addConnection(specId, {
+      fromId: stubId,
+      toId: "root-B",
+      points: [
+        { x: 20, y: 10 },
+        { x: 40, y: 10 },
+      ],
+    })
+    model.addOutgoingStub(specId, {
+      id: "outgoing-0",
+      label: "B",
+      sourceId: "root-B",
+      start: { x: 10, y: 10 },
+      end: { x: 30, y: 10 },
+      points: [
+        { x: 10, y: 10 },
+        { x: 30, y: 10 },
+      ],
+    })
+
+    model.removeIncomingStub(specId, stub)
+
+    expect(model.getConnections(specId)).toHaveLength(0)
+    expect(model.getOutgoingStubs(specId)).toHaveLength(0)
+  })
+
+  it("removes multiple outgoing stubs when requested", () => {
+    const model = createGameModel()
+    const specId = "root"
+    model.addOutgoingStub(specId, {
+      id: "outgoing-0",
+      label: "B",
+      sourceId: "node-a",
+      start: { x: 10, y: 10 },
+      end: { x: 30, y: 10 },
+      points: [
+        { x: 10, y: 10 },
+        { x: 30, y: 10 },
+      ],
+    })
+    model.addOutgoingStub(specId, {
+      id: "outgoing-1",
+      label: "B",
+      sourceId: "node-a",
+      start: { x: 20, y: 20 },
+      end: { x: 40, y: 20 },
+      points: [
+        { x: 20, y: 20 },
+        { x: 40, y: 20 },
+      ],
+    })
+
+    model.removeOutgoingStubs(specId, 1)
+    expect(model.getOutgoingStubs(specId)).toHaveLength(1)
+
+    model.removeOutgoingStubs(specId, 2)
+    expect(model.getOutgoingStubs(specId)).toHaveLength(0)
+  })
+
   it("limits incoming stubs to one outgoing connection", () => {
     const model = createGameModel()
     const specId = "child"
@@ -114,6 +235,46 @@ describe("createGameModel", () => {
     })
 
     expect(allowed).toBe(false)
+  })
+
+  it("allows outbound connections when capacity is boosted", () => {
+    const model = createGameModel()
+    const specId = "root"
+    const boxLabels = new Map<string, string>([
+      ["node-c", "C"],
+      ["node-a", "A"],
+    ])
+
+    model.addOutgoingStub("node-c", {
+      id: "outgoing-0",
+      label: "C",
+      sourceId: "node-c",
+      start: { x: 0, y: 0 },
+      end: { x: 10, y: 0 },
+      points: [
+        { x: 0, y: 0 },
+        { x: 10, y: 0 },
+      ],
+    })
+
+    const allowed = canAddConnection({
+      connection: {
+        fromId: "node-c",
+        toId: "node-a",
+        points: [
+          { x: 0, y: 0 },
+          { x: 10, y: 0 },
+        ],
+      },
+      connections: model.getConnections(specId),
+      boxLabels,
+      resourceNodeIds: new Set(["node-a", "node-c"]),
+      getOutboundCapacityForNode: (nodeId, label) =>
+        (label.trim().toUpperCase() === "A" ? 3 : 0) +
+        model.getOutboundCapacityBoost(nodeId),
+    })
+
+    expect(allowed).toBe(true)
   })
 
   it("limits resource node outbound connections by label capacity", () => {

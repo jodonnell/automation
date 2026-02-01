@@ -5,10 +5,11 @@ import {
   FLOW_SPACING_PX,
   FLOW_TEXT_STYLE,
 } from "../constants"
+import type { OutboundCapacityResolver } from "../core/flowLabel"
 import { resolveFlowLabel } from "../core/flowLabel"
 import { drawSmoothPath, smoothPath } from "./path"
 import { updateResourceNodeOutboundCounts } from "./nodeRenderer"
-import type { ConnectionPath, IncomingStub } from "../core/types"
+import type { ConnectionPath, IncomingStub, OutgoingStub } from "../core/types"
 import type { NodeContainer } from "./types"
 
 type PathSample = {
@@ -62,13 +63,21 @@ export const renderConnections = (
   node: NodeContainer,
   connections: ConnectionPath[],
   incoming: IncomingStub[],
+  outgoing: OutgoingStub[],
   onConnectionRightClick?: (connection: ConnectionPath) => void,
   onIncomingStubPointerDown?: (stub: IncomingStub, event: unknown) => void,
+  onOutgoingStubRightClick?: (stub: OutgoingStub) => void,
+  getOutboundCapacityForNode?: OutboundCapacityResolver,
 ) => {
-  updateResourceNodeOutboundCounts(node, connections)
+  updateResourceNodeOutboundCounts(
+    node,
+    connections,
+    getOutboundCapacityForNode,
+  )
   node.connectionLayer.removeChildren()
   node.flowLayer.removeChildren()
   node.incomingLayer.removeChildren()
+  node.outgoingLayer.removeChildren()
   node.updateFlows = undefined
 
   const flows: FlowAnimation[] = []
@@ -162,6 +171,65 @@ export const renderConnections = (
     const label = stub.label?.trim()
     if (!label) return
     const path = buildPathSample([stub.start, stub.end])
+    if (path.length <= 1) return
+    const glyphCount = Math.max(1, Math.floor(path.length / FLOW_SPACING_PX))
+    const glyphs: Text[] = []
+    for (let i = 0; i < glyphCount; i += 1) {
+      const glyph = new Text({
+        text: label.toLowerCase(),
+        style: FLOW_TEXT_STYLE,
+      })
+      glyph.anchor.set(0.5)
+      glyph.alpha = 0.95
+      node.flowLayer.addChild(glyph)
+      glyphs.push(glyph)
+    }
+    flows.push({
+      path,
+      glyphs,
+      spacing: FLOW_SPACING_PX,
+      speed: FLOW_SPEED_PX_PER_SEC,
+      offset: Math.random() * FLOW_SPACING_PX,
+    })
+  })
+
+  outgoing.forEach((stub) => {
+    const line = new Graphics()
+    drawSmoothPath(line, stub.points, CONNECTION_STYLE)
+    if (onOutgoingStubRightClick) {
+      const minX = Math.min(stub.start.x, stub.end.x)
+      const minY = Math.min(stub.start.y, stub.end.y)
+      const width = Math.abs(stub.end.x - stub.start.x)
+      const height = Math.abs(stub.end.y - stub.start.y)
+      const padding = Math.max(CONNECTION_STYLE.width * 2, 8)
+      line.hitArea = new Rectangle(
+        minX - padding,
+        minY - padding,
+        Math.max(1, width + padding * 2),
+        Math.max(1, height + padding * 2),
+      )
+      line.eventMode = "static"
+      line.cursor = "pointer"
+      line.on("pointerdown", (event) => {
+        const button = (event as { button?: number }).button
+        if (button !== 2) return
+        const stoppable = event as {
+          stopPropagation?: () => void
+          preventDefault?: () => void
+        }
+        stoppable.stopPropagation?.()
+        stoppable.preventDefault?.()
+        onOutgoingStubRightClick(stub)
+      })
+    } else {
+      line.eventMode = "none"
+      line.cursor = "default"
+    }
+    node.outgoingLayer.addChild(line)
+
+    const label = stub.label?.trim()
+    if (!label) return
+    const path = buildPathSample(stub.points)
     if (path.length <= 1) return
     const glyphCount = Math.max(1, Math.floor(path.length / FLOW_SPACING_PX))
     const glyphs: Text[] = []

@@ -57,6 +57,10 @@ export const createPixiMock = () => {
       this.children = []
     }
 
+    destroy(): void {
+      this.children = []
+    }
+
     on(event: string, handler: (event: unknown) => void): this {
       this._listeners[event] = handler
       return this

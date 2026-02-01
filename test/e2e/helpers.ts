@@ -27,6 +27,8 @@ type GameWindow = typeof window & {
     model?: {
       getConnections?: (specId: string) => unknown[]
       getIncomingStubs?: (specId: string) => unknown[]
+      getOutgoingStubs?: (specId: string) => unknown[]
+      addConnection?: (specId: string, connection: unknown) => void
     }
   }
 }

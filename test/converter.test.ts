@@ -394,7 +394,7 @@ describe("converter flows", () => {
       },
     ]
 
-    renderConnections(node, connections, [])
+    renderConnections(node, connections, [], [], undefined, undefined, undefined)
 
     const glyphs = node.flowLayer.children as Array<{ text: string }>
     expect(glyphs[0].text).toBe("a")
@@ -426,7 +426,7 @@ describe("converter flows", () => {
       },
     ]
 
-    renderConnections(node, connections, [])
+    renderConnections(node, connections, [], [], undefined, undefined, undefined)
 
     expect(node.flowLayer.children).toHaveLength(0)
   })
@@ -462,7 +462,15 @@ describe("incoming stub interactions", () => {
     )
     model.addIncomingStub(node.specId, stub)
 
-    renderConnections(node, [], [stub], undefined, drag.handleIncomingStubPointerDown)
+    renderConnections(
+      node,
+      [],
+      [stub],
+      [],
+      undefined,
+      drag.handleIncomingStubPointerDown,
+      undefined,
+    )
 
     const line = node.incomingLayer.children[0] as {
       _listeners?: Record<string, (event: any) => void>
@@ -483,5 +491,103 @@ describe("incoming stub interactions", () => {
     expect(connections[0].fromId).toBe(stub.id)
     expect(connections[0].toId).toBe("converter-0")
     expect(node.boxLabels.get(stub.id)).toBe("A")
+  })
+})
+
+describe("edge export interactions", () => {
+  it("increments outbound capacity when dragging a matching label to the edge", () => {
+    const spec: NodeSpec = {
+      id: "root-C",
+      label: "C",
+      children: [{ id: "root-C-C", label: "C" }],
+    }
+    const width = 400
+    const height = 300
+    const layout = computeLayout(spec, width, height)
+    const node = createNode(spec, width, height, layout)
+    const model = createGameModel()
+    const nodeManager = { current: node } as NodeManager
+    const stage = new Container()
+
+    const drag = createDragInteractions({
+      nodeManager,
+      model,
+      cameraController: { isTweening: false },
+      resolveSpecForBox: () => null,
+      getCurrentSpec: () => spec,
+      onDoubleClick: vi.fn(),
+    })
+
+    drag.bindBoxHandlers(node)
+    drag.attachStageHandlers(stage)
+
+    const box = node.children.find((child: any) => "boxSize" in child) as
+      | { position: { x: number; y: number }; boxSize: number; _listeners?: Record<string, any> }
+      | undefined
+    const center = {
+      x: (box?.position.x ?? 0) + (box?.boxSize ?? 0) / 2,
+      y: (box?.position.y ?? 0) + (box?.boxSize ?? 0) / 2,
+    }
+
+    box?._listeners?.pointerdown?.({
+      button: 0,
+      global: center,
+    })
+    ;(stage as unknown as { _listeners: Record<string, any> })._listeners
+      .pointermove({ global: { x: 2, y: height / 2 } })
+    ;(stage as unknown as { _listeners: Record<string, any> })._listeners
+      .pointerup({ global: { x: 2, y: height / 2 } })
+
+    expect(model.getOutboundCapacityBoost(spec.id)).toBe(1)
+  })
+
+  it("increments outbound capacity on pointerupoutside", () => {
+    const spec: NodeSpec = {
+      id: "root-B",
+      label: "B",
+      children: [{ id: "root-B-B", label: "B" }],
+    }
+    const width = 400
+    const height = 300
+    const layout = computeLayout(spec, width, height)
+    const node = createNode(spec, width, height, layout)
+    const model = createGameModel()
+    const nodeManager = { current: node } as NodeManager
+    const stage = new Container()
+
+    const drag = createDragInteractions({
+      nodeManager,
+      model,
+      cameraController: { isTweening: false },
+      resolveSpecForBox: () => null,
+      getCurrentSpec: () => spec,
+      onDoubleClick: vi.fn(),
+    })
+
+    drag.bindBoxHandlers(node)
+    drag.attachStageHandlers(stage)
+
+    const box = node.children.find((child: any) => "boxSize" in child) as
+      | {
+          position: { x: number; y: number }
+          boxSize: number
+          _listeners?: Record<string, any>
+        }
+      | undefined
+    const center = {
+      x: (box?.position.x ?? 0) + (box?.boxSize ?? 0) / 2,
+      y: (box?.position.y ?? 0) + (box?.boxSize ?? 0) / 2,
+    }
+
+    box?._listeners?.pointerdown?.({
+      button: 0,
+      global: center,
+    })
+    ;(stage as unknown as { _listeners: Record<string, any> })._listeners
+      .pointermove({ global: { x: 2, y: height / 2 } })
+    ;(stage as unknown as { _listeners: Record<string, any> })._listeners
+      .pointerupoutside({ type: "pointerupoutside" })
+
+    expect(model.getOutboundCapacityBoost(spec.id)).toBe(1)
   })
 })

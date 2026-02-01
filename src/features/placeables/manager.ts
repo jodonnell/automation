@@ -85,6 +85,7 @@ export const createPlaceableManager = ({
     if (!isDeleteableBox(box)) return false
     const id = box.name ?? ""
     model.removeConnectionsForBox(nodeManager.current.specId, id)
+    model.removeOutgoingStubsForSource(nodeManager.current.specId, id)
     nodeManager.current.boxLabels.delete(id)
     nodeManager.current.removeChild(box)
     onRebindBoxes()

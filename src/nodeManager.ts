@@ -1,5 +1,6 @@
 import type { Container } from "pixi.js"
 import { renderConnections } from "./renderer/connectionRenderer"
+import { createOutboundCapacityResolver } from "./core/flowLabel"
 import { createNode } from "./renderer/nodeRenderer"
 import type { GameModel } from "./core/model"
 import type { IncomingStub, NodeSpec } from "./core/types"
@@ -15,6 +16,7 @@ export type NodeManager = {
   push: () => void
   pop: () => NodeContainer | undefined
   positionCurrent: () => void
+  refreshCurrent: () => void
   getOrCreateNode: (spec: NodeSpec, width: number, height: number) => NodeContainer
 }
 
@@ -35,6 +37,22 @@ export const createNodeManager = (
 
   const initialSize = getNodeSize()
   const nodeCache = new Map<string, NodeContainer>()
+  const outboundCapacityResolver = createOutboundCapacityResolver(
+    model.getOutboundCapacityBoost,
+  )
+  const refreshNode = (node: NodeContainer) => {
+    syncIncomingStubLabels(node.boxLabels, model.getIncomingStubs(node.specId))
+    renderConnections(
+      node,
+      model.getConnections(node.specId),
+      model.getIncomingStubs(node.specId),
+      model.getOutgoingStubs(node.specId),
+      (connection) => model.removeConnectionWithStub(node.specId, connection),
+      incomingStubHandlerRef?.current,
+      (stub) => model.removeOutgoingStub(node.specId, stub),
+      outboundCapacityResolver,
+    )
+  }
   const getOrCreateNode = (
     spec: NodeSpec,
     width: number,
@@ -42,26 +60,12 @@ export const createNodeManager = (
   ) => {
     const cached = nodeCache.get(spec.id)
     if (cached && cached.nodeWidth === width && cached.nodeHeight === height) {
-      syncIncomingStubLabels(cached.boxLabels, model.getIncomingStubs(spec.id))
-      renderConnections(
-        cached,
-        model.getConnections(spec.id),
-        model.getIncomingStubs(spec.id),
-        (connection) => model.removeConnectionWithStub(spec.id, connection),
-        incomingStubHandlerRef?.current,
-      )
+      refreshNode(cached)
       return cached
     }
     const layout = model.getLayout(spec, width, height)
     const nextNode = createNode(spec, width, height, layout)
-    syncIncomingStubLabels(nextNode.boxLabels, model.getIncomingStubs(spec.id))
-    renderConnections(
-      nextNode,
-      model.getConnections(spec.id),
-      model.getIncomingStubs(spec.id),
-      (connection) => model.removeConnectionWithStub(spec.id, connection),
-      incomingStubHandlerRef?.current,
-    )
+    refreshNode(nextNode)
     nodeCache.set(spec.id, nextNode)
     return nextNode
   }
@@ -86,6 +90,9 @@ export const createNodeManager = (
     },
     positionCurrent() {
       positionNode(currentNode)
+    },
+    refreshCurrent() {
+      refreshNode(currentNode)
     },
     getOrCreateNode,
   }

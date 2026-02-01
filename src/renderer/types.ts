@@ -12,6 +12,7 @@ export type NodeContainer = Container & {
   connectionLayer: Container
   flowLayer: Container
   incomingLayer: Container
+  outgoingLayer: Container
   specId: string
   boxLabels: Map<string, string>
   resourceNodeIds: Set<string>

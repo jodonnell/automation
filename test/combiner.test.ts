@@ -345,7 +345,7 @@ describe("combiner flows", () => {
       },
     ]
 
-    renderConnections(node, connections, [])
+    renderConnections(node, connections, [], [], undefined, undefined, undefined)
 
     const glyphs = node.flowLayer.children as Array<{ text: string }>
     expect(glyphs[0].text).toBe("c")
@@ -393,7 +393,7 @@ describe("combiner flows", () => {
       },
     ]
 
-    renderConnections(node, connections, [])
+    renderConnections(node, connections, [], [], undefined, undefined, undefined)
 
     const glyphs = node.flowLayer.children as Array<{ text: string }>
     expect(glyphs[0].text).toBe("1")
@@ -449,7 +449,7 @@ describe("combiner flows", () => {
       },
     ]
 
-    renderConnections(node, connections, [])
+    renderConnections(node, connections, [], [], undefined, undefined, undefined)
 
     expect(node.flowLayer.children).toHaveLength(0)
   })

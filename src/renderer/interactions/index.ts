@@ -40,6 +40,7 @@ type InteractionDeps = {
   ) => { x: number; y: number; scale: number }
   worldBoundsToCameraLocal: (bounds: Bounds) => Bounds
   resolveSpecForBox: (box: BoxContainer) => NodeSpec | null
+  getCurrentSpec?: () => NodeSpec | null
   isDeleteableBox?: (box: BoxContainer) => boolean
   onDeleteBox?: (box: BoxContainer) => void
 }
@@ -55,6 +56,7 @@ export const setupInteractions = ({
   getCenteredTransform,
   worldBoundsToCameraLocal,
   resolveSpecForBox,
+  getCurrentSpec,
   isDeleteableBox,
   onDeleteBox,
 }: InteractionDeps) => {
@@ -64,6 +66,7 @@ export const setupInteractions = ({
     model,
     cameraController,
     resolveSpecForBox,
+    getCurrentSpec,
     onDoubleClick: (box) => handleDoubleClickBox(box),
     isDeleteableBox,
     onDeleteBox,

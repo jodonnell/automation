@@ -35,8 +35,17 @@ export type PlaceableBehavior = {
   canAcceptIncoming?: (args: CanAcceptIncomingArgs) => boolean
 }
 
+export type OutboundCapacityResolver = (nodeId: string, label: string) => number
+
 export const getOutboundCapacityForLabel = (label: string) => {
   return label.trim().toUpperCase() === "A" ? 3 : 0
+}
+
+export const createOutboundCapacityResolver = (
+  getBoostForNodeId?: (nodeId: string) => number,
+): OutboundCapacityResolver => {
+  return (nodeId, label) =>
+    getOutboundCapacityForLabel(label) + (getBoostForNodeId?.(nodeId) ?? 0)
 }
 
 export const getLabelType = (label?: string | null): LabelType => {
@@ -168,13 +177,22 @@ export const canAddConnection = (params: {
   connections: ConnectionPath[]
   boxLabels: Map<string, string>
   resourceNodeIds?: Set<string>
+  getOutboundCapacityForNode?: OutboundCapacityResolver
 }) => {
-  const { connection, connections, boxLabels, resourceNodeIds } = params
+  const {
+    connection,
+    connections,
+    boxLabels,
+    resourceNodeIds,
+    getOutboundCapacityForNode,
+  } = params
   const fromBehavior = getBehaviorForId(connection.fromId)
   const toBehavior = getBehaviorForId(connection.toId)
   if (resourceNodeIds?.has(connection.fromId)) {
     const label = boxLabels.get(connection.fromId) ?? ""
-    const capacity = getOutboundCapacityForLabel(label)
+    const capacity = getOutboundCapacityForNode
+      ? getOutboundCapacityForNode(connection.fromId, label)
+      : getOutboundCapacityForLabel(label)
     if (capacity <= 0) return false
     const used = connections.filter(
       (item) => item.fromId === connection.fromId,

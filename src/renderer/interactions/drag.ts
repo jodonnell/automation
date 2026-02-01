@@ -1,10 +1,19 @@
 import { Graphics, Point } from "pixi.js"
 import { CONNECTION_STYLE, DOUBLE_CLICK_MS } from "../../constants"
-import { canAddConnection, resolveFlowLabel } from "../../core/flowLabel"
+import {
+  canAddConnection,
+  createOutboundCapacityResolver,
+  resolveFlowLabel,
+} from "../../core/flowLabel"
 import { createDragStateMachine } from "../../core/interactionState"
 import type { BoxInfo, DragAction } from "../../core/interactionState"
 import type { GameModel } from "../../core/model"
-import type { IncomingStub, NodeSpec, PointData } from "../../core/types"
+import type {
+  IncomingStub,
+  NodeSpec,
+  OutgoingStub,
+  PointData,
+} from "../../core/types"
 import { drawSmoothPath } from "../path"
 import type { NodeManager } from "../../nodeManager"
 import type { BoxContainer, NodeContainer } from "../types"
@@ -18,6 +27,7 @@ type DragDeps = {
   model: GameModel
   cameraController: CameraController
   resolveSpecForBox: (box: BoxContainer) => NodeSpec | null
+  getCurrentSpec?: () => NodeSpec | null
   onDoubleClick: (box: BoxContainer) => void
   isDeleteableBox?: (box: BoxContainer) => boolean
   onDeleteBox?: (box: BoxContainer) => void
@@ -32,12 +42,16 @@ export const createDragInteractions = ({
   model,
   cameraController,
   resolveSpecForBox,
+  getCurrentSpec,
   onDoubleClick,
   isDeleteableBox,
   onDeleteBox,
 }: DragDeps) => {
   const state = createDragStateMachine({ doubleClickMs: DOUBLE_CLICK_MS })
   const lineState: DragLineState = { line: null }
+  const outboundCapacityResolver = createOutboundCapacityResolver(
+    model.getOutboundCapacityBoost,
+  )
 
   const ensureLine = () => {
     if (lineState.line) return lineState.line
@@ -64,6 +78,9 @@ export const createDragInteractions = ({
     const local = nodeManager.current.toLocal(new Point(global.x, global.y))
     return { x: local.x, y: local.y }
   }
+
+  const getGlobalPointFromEvent = (event: unknown) =>
+    (event as { global?: { x: number; y: number } }).global ?? null
 
   const getBoxInfo = (box: BoxContainer): BoxInfo => {
     const spec = resolveSpecForBox(box)
@@ -121,6 +138,7 @@ export const createDragInteractions = ({
               connections: currentConnections,
               boxLabels: nodeManager.current.boxLabels,
               resourceNodeIds: nodeManager.current.resourceNodeIds,
+              getOutboundCapacityForNode: outboundCapacityResolver,
             })
           ) {
             clearLine()
@@ -169,6 +187,7 @@ export const createDragInteractions = ({
               connections: currentConnections,
               boxLabels: nodeManager.current.boxLabels,
               resourceNodeIds: nodeManager.current.resourceNodeIds,
+              getOutboundCapacityForNode: outboundCapacityResolver,
             })
           ) {
             clearLine()
@@ -186,6 +205,45 @@ export const createDragInteractions = ({
           const line = ensureLine()
           drawConnection(line, action.points)
           lineState.line = null
+          break
+        }
+        case "edge-connection-added": {
+          const currentSpec = getCurrentSpec?.() ?? null
+          const specLabel = currentSpec?.label?.trim() ?? ""
+          if (!specLabel) {
+            clearLine()
+            break
+          }
+          const currentConnections = model.getConnections(
+            nodeManager.current.specId,
+          )
+          const resolved =
+            resolveFlowLabel(
+              action.fromId,
+              nodeManager.current.boxLabels,
+              currentConnections,
+            ) ?? nodeManager.current.boxLabels.get(action.fromId)
+          const resolvedLabel = resolved?.trim() ?? ""
+          if (!resolvedLabel) {
+            clearLine()
+            break
+          }
+          if (
+            resolvedLabel.toUpperCase() !== specLabel.toUpperCase()
+          ) {
+            clearLine()
+            break
+          }
+          const outgoingStub: OutgoingStub = {
+            id: model.createOutgoingStubId(),
+            label: resolvedLabel,
+            sourceId: action.fromId,
+            start: action.start,
+            end: action.end,
+            points: action.points,
+          }
+          model.addOutgoingStub(nodeManager.current.specId, outgoingStub)
+          clearLine()
           break
         }
         case "double-click": {
@@ -257,12 +315,35 @@ export const createDragInteractions = ({
 
   const handlePointerUp = (event: unknown) => {
     const localPoint = getLocalPointFromEvent(event)
+    const globalPoint = getGlobalPointFromEvent(event)
+    const isPointerUpOutside =
+      (event as { type?: string }).type === "pointerupoutside"
     const now = performance.now()
     const actions = state.endDrag(
       localPoint,
       getBoxList(nodeManager.current),
       now,
-      { width: nodeManager.current.nodeWidth, height: nodeManager.current.nodeHeight },
+      {
+        width: nodeManager.current.nodeWidth,
+        height: nodeManager.current.nodeHeight,
+      },
+      {
+        isEdge: (() => {
+          if (!globalPoint) return isPointerUpOutside
+          const margin =
+            Math.min(
+              nodeManager.current.nodeWidth,
+              nodeManager.current.nodeHeight,
+            ) * 0.06
+          if (isPointerUpOutside) return true
+          return (
+            globalPoint.x <= margin ||
+            globalPoint.y <= margin ||
+            globalPoint.x >= nodeManager.current.nodeWidth - margin ||
+            globalPoint.y >= nodeManager.current.nodeHeight - margin
+          )
+        })(),
+      },
     )
     applyActions(actions)
   }

@@ -144,6 +144,7 @@ export const createZoomInteractions = ({
           nodeManager.current = previous
           camera.addChild(nodeManager.current)
           nodeManager.positionCurrent()
+          nodeManager.refreshCurrent()
           nodeManager.current.alpha = 1
           cameraController.reset()
           onRebindBoxes()

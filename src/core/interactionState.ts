@@ -25,6 +25,13 @@ export type DragAction =
       points: PointData[]
       sourceStub: IncomingStub
     }
+  | {
+      type: "edge-connection-added"
+      fromId: string
+      start: PointData
+      end: PointData
+      points: PointData[]
+    }
   | { type: "double-click"; boxId: string }
 
 export type DragStateMachine = {
@@ -36,6 +43,7 @@ export type DragStateMachine = {
     boxes: BoxInfo[],
     now: number,
     viewSize: { width: number; height: number },
+    edgeOverride?: { isEdge: boolean },
   ) => DragAction[]
   clear: () => DragAction[]
 }
@@ -123,6 +131,19 @@ const updatePathPoints = (
   }
 }
 
+const isPointNearEdge = (
+  point: PointData,
+  viewSize: { width: number; height: number },
+  edgeMargin: number,
+) => {
+  return (
+    point.x <= edgeMargin ||
+    point.y <= edgeMargin ||
+    point.x >= viewSize.width - edgeMargin ||
+    point.y >= viewSize.height - edgeMargin
+  )
+}
+
 const buildIncomingStub = (
   box: BoxInfo,
   edgePoint: PointData,
@@ -159,6 +180,7 @@ export const createDragStateMachine = (params?: {
   const doubleClickMs = params?.doubleClickMs ?? 350
   const dragThreshold = params?.dragThreshold ?? 6
   const pointSpacing = params?.pointSpacing ?? 6
+  const edgeMarginRatio = 0.06
 
   let dragState: DragState | null = null
   let lastClickTime = 0
@@ -270,6 +292,7 @@ export const createDragStateMachine = (params?: {
     boxes: BoxInfo[],
     now: number,
     viewSize: { width: number; height: number },
+    edgeOverride?: { isEdge: boolean },
   ): DragAction[] => {
     if (!dragState) return []
     const actions: DragAction[] = []
@@ -311,6 +334,8 @@ export const createDragStateMachine = (params?: {
     const moved = (state.moved && state.lineActive) || Boolean(droppedOnOther)
     const startAnchor =
       state.startAnchor ?? getBoxEdgePoint(state.startBox, point)
+    const edgeMargin =
+      Math.min(viewSize.width, viewSize.height) * edgeMarginRatio
 
     if (droppedOnOther && targetBox) {
       const endAnchor = getBoxEdgePoint(
@@ -330,6 +355,27 @@ export const createDragStateMachine = (params?: {
         toId: targetBox.id,
         points: connectionPoints,
         incomingStub: buildIncomingStub(targetBox, endAnchor, viewSize),
+      })
+      dragState = null
+      return actions
+    }
+
+    const isEdge =
+      edgeOverride?.isEdge ?? isPointNearEdge(point, viewSize, edgeMargin)
+    if (state.lineActive && isEdge) {
+      const endPoint = state.lastOutsidePoint ?? point
+      const points =
+        state.points.length > 0
+          ? state.points.map((item, index, array) =>
+              index === array.length - 1 ? endPoint : item,
+            )
+          : [endPoint]
+      actions.push({
+        type: "edge-connection-added",
+        fromId: state.startBox.id,
+        start: startAnchor,
+        end: endPoint,
+        points: [startAnchor, ...points],
       })
       dragState = null
       return actions

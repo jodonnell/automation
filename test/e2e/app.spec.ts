@@ -340,3 +340,131 @@ test("combiner combines two letter inputs in order", async ({ page }) => {
   expect(flowTexts.length).toBeGreaterThan(0)
   expect(flowTexts).toContain("ca")
 })
+
+test("removes parent connections when inner B connections are deleted", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 900, height: 700 })
+  await page.goto("/?debug=1")
+
+  const canvas = page.locator("canvas")
+  await expect(canvas).toHaveCount(1)
+
+  await waitForGameReady(page)
+
+  const rootCenters = await getBoxCenters(page, ["root-C"])
+  await page.mouse.dblclick(rootCenters["root-C"].x, rootCenters["root-C"].y)
+  await waitForCurrentSpec(page, "root-C")
+
+  const childCenters = await getBoxCenters(page, ["C-B"])
+  await page.mouse.dblclick(childCenters["C-B"].x, childCenters["C-B"].y)
+  await waitForCurrentSpec(page, "C-B")
+
+  await page.evaluate(() => {
+    const game = (
+      window as {
+        game?: {
+          model?: {
+            addConnection?: (id: string, connection: unknown) => void
+            addOutgoingStub?: (id: string, stub: unknown) => void
+          }
+        }
+      }
+    ).game
+    const connection = {
+      fromId: "C-B-A1",
+      toId: "C-B-A2",
+      points: [
+        { x: 20, y: 20 },
+        { x: 80, y: 20 },
+      ],
+    }
+    game?.model?.addConnection?.("C-B", connection)
+    game?.model?.addOutgoingStub?.("C-B", {
+      id: "outgoing-test",
+      label: "B",
+      sourceId: "converter-test",
+      start: { x: 40, y: 40 },
+      end: { x: 120, y: 40 },
+      points: [
+        { x: 40, y: 40 },
+        { x: 120, y: 40 },
+      ],
+    })
+    ;(window as { __testConnection?: unknown }).__testConnection = connection
+  })
+
+  await page.waitForFunction(() => {
+    const game = (
+      window as {
+        game?: {
+          nodeManager?: { current?: { specId?: string } }
+          model?: { getOutgoingStubs?: (id: string) => unknown[] }
+        }
+      }
+    ).game
+    const specId = game?.nodeManager?.current?.specId ?? ""
+    const outgoing = game?.model?.getOutgoingStubs?.(specId) ?? []
+    return outgoing.length > 0
+  })
+
+  await page.mouse.click(10, 10, { button: "right" })
+  await page.mouse.click(10, 10, { button: "right" })
+  await waitForCurrentSpec(page, "root-C")
+
+  await page.evaluate(() => {
+    const game = (
+      window as {
+        game?: {
+          model?: { addConnection?: (id: string, connection: unknown) => void }
+        }
+      }
+    ).game
+    game?.model?.addConnection?.("root-C", {
+      fromId: "C-B",
+      toId: "C-B",
+      points: [
+        { x: 40, y: 40 },
+        { x: 120, y: 40 },
+      ],
+    })
+  })
+
+  await page.waitForFunction(() => {
+    const game = (
+      window as {
+        game?: { model?: { getConnections?: (id: string) => unknown[] } }
+      }
+    ).game
+    const connections = game?.model?.getConnections?.("root-C") ?? []
+    return connections.length === 1
+  })
+
+  await page.mouse.dblclick(childCenters["C-B"].x, childCenters["C-B"].y)
+  await waitForCurrentSpec(page, "C-B")
+
+  await page.evaluate(() => {
+    const game = (
+      window as {
+        game?: {
+          model?: { removeConnection?: (id: string, c: unknown) => void }
+        }
+      }
+    ).game
+    const connection = (window as { __testConnection?: unknown })
+      .__testConnection
+    if (connection) {
+      game?.model?.removeConnection?.("C-B", connection)
+    }
+  })
+
+  await page.waitForFunction(() => {
+    const game = (
+      window as {
+        game?: { model?: { getConnections?: (id: string) => unknown[] } }
+      }
+    ).game
+    const connections = game?.model?.getConnections?.("root-C") ?? []
+    return connections.length === 0
+  })
+})

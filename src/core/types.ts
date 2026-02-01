@@ -30,6 +30,15 @@ export type IncomingStub = {
   end: PointData
 }
 
+export type OutgoingStub = {
+  id: string
+  label: string
+  sourceId: string
+  start: PointData
+  end: PointData
+  points: PointData[]
+}
+
 export type NodeLayout = {
   boxSize: number
   positions: Map<string, PointData>

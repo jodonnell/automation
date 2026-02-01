@@ -4,6 +4,7 @@ import { setupInteractions } from "../renderer/interactions"
 import { createNodeManager } from "../nodeManager"
 import { centerBoundsAtScale, worldBoundsToLocal } from "../core/sceneMath"
 import { createGameModel } from "../core/model"
+import { createOutboundCapacityResolver } from "../core/flowLabel"
 import { setupDebug } from "../debug"
 import { renderConnections } from "../renderer/connectionRenderer"
 import { createPlaceableManager } from "../features/placeables/manager"
@@ -48,7 +49,48 @@ export const createSceneController = ({
     model,
     incomingStubHandlerRef,
   )
+  const outboundCapacityResolver = createOutboundCapacityResolver(
+    model.getOutboundCapacityBoost,
+  )
+  const nodeSpecIndex = new Map<string, NodeSpec>()
+  const parentSpecIndex = new Map<string, string>()
+  const indexSpecs = (spec: NodeSpec) => {
+    nodeSpecIndex.set(spec.id, spec)
+    spec.children?.forEach((child) => {
+      parentSpecIndex.set(child.id, spec.id)
+      indexSpecs(child)
+    })
+  }
+  indexSpecs(rootSpec)
+
+  const connectionCounts = new Map<string, number>()
+
   model.onGraphChanged((specId) => {
+    const currentCount = model.getConnections(specId).length
+    const previousCount = connectionCounts.get(specId) ?? 0
+    const delta = currentCount - previousCount
+    connectionCounts.set(specId, currentCount)
+    if (delta < 0) {
+      model.removeOutgoingStubs(specId, Math.abs(delta))
+      const parentId = parentSpecIndex.get(specId)
+      if (parentId) {
+        const childSpec = nodeSpecIndex.get(specId)
+        const capacity = outboundCapacityResolver(
+          specId,
+          childSpec?.label ?? "",
+        )
+        const parentConnections = model.getConnections(parentId)
+        const fromChild = parentConnections.filter(
+          (connection) => connection.fromId === specId,
+        )
+        const excess = fromChild.length - capacity
+        if (excess > 0) {
+          fromChild.slice(0, excess).forEach((connection) => {
+            model.removeConnection(parentId, connection)
+          })
+        }
+      }
+    }
     const current = nodeManager.current
     if (current.specId !== specId) return
     syncIncomingStubLabels(current.boxLabels, model.getIncomingStubs(specId))
@@ -56,8 +98,11 @@ export const createSceneController = ({
       current,
       model.getConnections(specId),
       model.getIncomingStubs(specId),
+      model.getOutgoingStubs(specId),
       (connection) => model.removeConnectionWithStub(specId, connection),
       incomingStubHandlerRef.current,
+      (stub) => model.removeOutgoingStub(specId, stub),
+      outboundCapacityResolver,
     )
   })
   const cameraController = createCameraController(camera)
@@ -71,13 +116,6 @@ export const createSceneController = ({
       cameraController,
     })
   }
-
-  const nodeSpecIndex = new Map<string, NodeSpec>()
-  const indexSpecs = (spec: NodeSpec) => {
-    nodeSpecIndex.set(spec.id, spec)
-    spec.children?.forEach(indexSpecs)
-  }
-  indexSpecs(rootSpec)
 
   const getCenteredTransform = (bounds: Bounds, scale: number) =>
     centerBoundsAtScale(bounds, app.renderer.width, app.renderer.height, scale)
@@ -107,6 +145,7 @@ export const createSceneController = ({
     getCenteredTransform,
     worldBoundsToCameraLocal,
     resolveSpecForBox: (box) => nodeSpecIndex.get(box.name ?? "") ?? null,
+    getCurrentSpec: () => nodeSpecIndex.get(nodeManager.current.specId) ?? null,
     isDeleteableBox: placeableManager.isDeleteableBox,
     onDeleteBox: placeableManager.deleteBox,
   })
@@ -120,9 +159,12 @@ export const createSceneController = ({
     nodeManager.current,
     model.getConnections(nodeManager.current.specId),
     model.getIncomingStubs(nodeManager.current.specId),
+    model.getOutgoingStubs(nodeManager.current.specId),
     (connection) =>
       model.removeConnectionWithStub(nodeManager.current.specId, connection),
     incomingStubHandlerRef.current,
+    (stub) => model.removeOutgoingStub(nodeManager.current.specId, stub),
+    outboundCapacityResolver,
   )
 
   app.ticker.add((ticker) => {
