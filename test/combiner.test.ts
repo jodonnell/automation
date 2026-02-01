@@ -423,4 +423,34 @@ describe("combiner flows", () => {
     )
     expect(combined).toBe("3")
   })
+
+  it("skips flow when the combiner has no input", () => {
+    const node = buildNode(["1", "2"])
+    const combiner = createCombiner(40, "+", "combiner-0")
+    combiner.position.set(200, 200)
+    node.addChild(combiner)
+    node.boxLabels.set("combiner-0", "+")
+
+    const connections = [
+      {
+        fromId: "combiner-0",
+        toId: "root-0",
+        points: [
+          { x: 0, y: 20 },
+          { x: 10, y: 20 },
+        ],
+        incomingStub: makeStub(
+          "incoming-13",
+          { x: 10, y: 20 },
+          { x: 15, y: 20 },
+          "1",
+          "combiner-0",
+        ),
+      },
+    ]
+
+    renderConnections(node, connections, [])
+
+    expect(node.flowLayer.children).toHaveLength(0)
+  })
 })

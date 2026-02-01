@@ -10,7 +10,7 @@ export type ResolveFlowLabel = (
   boxLabels: Map<string, string>,
   connections: ConnectionPath[],
   visited?: Set<string>,
-) => string | undefined
+) => string | null | undefined
 
 export type ResolveLabelArgs = {
   boxId: string
@@ -31,7 +31,7 @@ export type PlaceableBehavior = {
   idPrefix: string
   maxIncoming?: number
   maxOutgoing?: number
-  resolveLabel?: (args: ResolveLabelArgs) => string | undefined
+  resolveLabel?: (args: ResolveLabelArgs) => string | null | undefined
   canAcceptIncoming?: (args: CanAcceptIncomingArgs) => boolean
 }
 
@@ -39,7 +39,7 @@ export const getOutboundCapacityForLabel = (label: string) => {
   return label.trim().toUpperCase() === "A" ? 3 : 0
 }
 
-export const getLabelType = (label?: string): LabelType => {
+export const getLabelType = (label?: string | null): LabelType => {
   const trimmed = label?.trim()
   if (!trimmed) return null
   if (/^\d+$/.test(trimmed)) return "number"
@@ -79,14 +79,14 @@ export const PLACEABLE_BEHAVIORS: PlaceableBehavior[] = [
       const incoming = connections.find(
         (connection) => connection.toId === boxId,
       )
-      if (!incoming) return boxLabels.get(boxId)
+      if (!incoming) return null
       const upstream = resolveLabel(
         incoming.fromId,
         boxLabels,
         connections,
         visited,
       )
-      if (!upstream) return boxLabels.get(boxId)
+      if (!upstream) return null
       return convertLabel(upstream)
     },
   },
@@ -104,7 +104,7 @@ export const PLACEABLE_BEHAVIORS: PlaceableBehavior[] = [
       const incoming = connections.filter(
         (connection) => connection.toId === boxId,
       )
-      if (incoming.length === 0) return boxLabels.get(boxId)
+      if (incoming.length === 0) return null
       const labels = incoming
         .map((connection) =>
           resolveLabel(
@@ -116,7 +116,7 @@ export const PLACEABLE_BEHAVIORS: PlaceableBehavior[] = [
         )
         .filter((label): label is string => Boolean(label))
       const combined = combineLabels(labels)
-      return combined ?? boxLabels.get(boxId)
+      return combined
     },
     canAcceptIncoming: ({ toId, fromId, boxLabels, connections }) => {
       const incoming = connections.filter(
@@ -124,12 +124,12 @@ export const PLACEABLE_BEHAVIORS: PlaceableBehavior[] = [
       )
       if (incoming.length === 0) return true
       if (incoming.length >= 2) return false
-      const existingLabel = resolveFlowLabel(
-        incoming[0].fromId,
-        boxLabels,
-        connections,
-      )
-      const newLabel = resolveFlowLabel(fromId, boxLabels, connections)
+      const existingLabel =
+        resolveFlowLabel(incoming[0].fromId, boxLabels, connections) ??
+        boxLabels.get(incoming[0].fromId)
+      const newLabel =
+        resolveFlowLabel(fromId, boxLabels, connections) ??
+        boxLabels.get(fromId)
       const existingType = getLabelType(existingLabel)
       const newType = getLabelType(newLabel)
       if (!existingType || !newType) return false
@@ -153,15 +153,14 @@ export const resolveFlowLabel: ResolveFlowLabel = (
   if (!behavior?.resolveLabel) return directLabel
   if (visited.has(boxId)) return directLabel
   visited.add(boxId)
-  return (
-    behavior.resolveLabel({
-      boxId,
-      boxLabels,
-      connections,
-      resolveLabel: resolveFlowLabel,
-      visited,
-    }) ?? directLabel
-  )
+  const resolved = behavior.resolveLabel({
+    boxId,
+    boxLabels,
+    connections,
+    resolveLabel: resolveFlowLabel,
+    visited,
+  })
+  return resolved === undefined ? directLabel : resolved
 }
 
 export const canAddConnection = (params: {

@@ -102,7 +102,7 @@ export const createDragInteractions = ({
               action.fromId,
               nodeManager.current.boxLabels,
               currentConnections,
-            ) ?? nodeManager.current.boxLabels.get(action.fromId) ?? ""
+            ) ?? ""
           const incomingStub: IncomingStub = {
             id: model.createIncomingStubId(),
             label: incomingLabel,

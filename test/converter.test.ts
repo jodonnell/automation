@@ -400,6 +400,36 @@ describe("converter flows", () => {
     expect(glyphs[0].text).toBe("a")
     expect(glyphs[1].text).toBe("1")
   })
+
+  it("skips flow when the converter has no input", () => {
+    const node = buildNode()
+    const converter = createConverter(40, "1/a", "converter-0")
+    converter.position.set(200, 200)
+    node.addChild(converter)
+    node.boxLabels.set("converter-0", "1/a")
+
+    const connections = [
+      {
+        fromId: "converter-0",
+        toId: "root-A",
+        points: [
+          { x: 0, y: 10 },
+          { x: 10, y: 10 },
+        ],
+        incomingStub: makeStub(
+          "incoming-8",
+          { x: 10, y: 10 },
+          { x: 15, y: 10 },
+          "1",
+          "converter-0",
+        ),
+      },
+    ]
+
+    renderConnections(node, connections, [])
+
+    expect(node.flowLayer.children).toHaveLength(0)
+  })
 })
 
 describe("incoming stub interactions", () => {
