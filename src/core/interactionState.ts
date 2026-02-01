@@ -1,4 +1,4 @@
-import type { IncomingStub, PointData } from "./types"
+import type { IncomingStub, IncomingStubGeometry, PointData } from "./types"
 
 export type BoxInfo = {
   id: string
@@ -16,12 +16,20 @@ export type DragAction =
       fromId: string
       toId: string
       points: PointData[]
-      incomingStub: IncomingStub
+      incomingStub: IncomingStubGeometry
+    }
+  | {
+      type: "incoming-connection-added"
+      fromId: string
+      toId: string
+      points: PointData[]
+      sourceStub: IncomingStub
     }
   | { type: "double-click"; boxId: string }
 
 export type DragStateMachine = {
   startDrag: (box: BoxInfo, point: PointData) => DragAction[]
+  startIncomingDrag: (stub: IncomingStub, point: PointData) => DragAction[]
   moveDrag: (point: PointData, boxes: BoxInfo[]) => DragAction[]
   endDrag: (
     point: PointData,
@@ -32,7 +40,8 @@ export type DragStateMachine = {
   clear: () => DragAction[]
 }
 
-type DragState = {
+type BoxDragState = {
+  type: "box"
   startBox: BoxInfo
   moved: boolean
   startLocal: PointData
@@ -41,6 +50,19 @@ type DragState = {
   startAnchor: PointData | null
   lineActive: boolean
 }
+
+type IncomingDragState = {
+  type: "incoming"
+  sourceStub: IncomingStub
+  moved: boolean
+  startLocal: PointData
+  points: PointData[]
+  lastOutsidePoint: PointData | null
+  startAnchor: PointData
+  lineActive: boolean
+}
+
+type DragState = BoxDragState | IncomingDragState
 
 const getBoxAtPoint = (point: PointData, boxes: BoxInfo[]) => {
   for (const box of boxes) {
@@ -105,7 +127,7 @@ const buildIncomingStub = (
   box: BoxInfo,
   edgePoint: PointData,
   viewSize: { width: number; height: number },
-): IncomingStub => {
+): IncomingStubGeometry => {
   const localX = edgePoint.x - box.x
   const localY = edgePoint.y - box.y
   const half = box.size / 2
@@ -144,12 +166,30 @@ export const createDragStateMachine = (params?: {
 
   const startDrag = (box: BoxInfo, point: PointData): DragAction[] => {
     dragState = {
+      type: "box",
       startBox: box,
       moved: false,
       startLocal: point,
       points: [],
       lastOutsidePoint: null,
       startAnchor: null,
+      lineActive: false,
+    }
+    return []
+  }
+
+  const startIncomingDrag = (
+    stub: IncomingStub,
+    point: PointData,
+  ): DragAction[] => {
+    dragState = {
+      type: "incoming",
+      sourceStub: stub,
+      moved: false,
+      startLocal: point,
+      points: [],
+      lastOutsidePoint: null,
+      startAnchor: { x: stub.end.x, y: stub.end.y },
       lineActive: false,
     }
     return []
@@ -162,6 +202,29 @@ export const createDragStateMachine = (params?: {
     const dy = point.y - dragState.startLocal.y
     if (!dragState.moved && Math.hypot(dx, dy) > dragThreshold) {
       dragState.moved = true
+    }
+
+    if (dragState.type === "incoming") {
+      const targetBox = getBoxAtPoint(point, boxes)
+      const isInsideTarget = targetBox !== null
+
+      if (!isInsideTarget) {
+        updatePathPoints(dragState.points, point, pointSpacing)
+        dragState.lastOutsidePoint = { x: point.x, y: point.y }
+      }
+
+      const endAnchor = isInsideTarget
+        ? getBoxEdgePoint(targetBox, dragState.lastOutsidePoint ?? point)
+        : null
+      const drawPoints = endAnchor
+        ? dragState.points.map((item, index, array) =>
+            index === array.length - 1 ? endAnchor : item,
+          )
+        : dragState.points
+      const pointsToDraw = [dragState.startAnchor, ...drawPoints]
+      dragState.lineActive = true
+      actions.push({ type: "drag-draw", points: pointsToDraw })
+      return actions
     }
 
     if (isPointInBox(point, dragState.startBox)) {
@@ -211,6 +274,38 @@ export const createDragStateMachine = (params?: {
     if (!dragState) return []
     const actions: DragAction[] = []
     const state = dragState
+    if (state.type === "incoming") {
+      const targetBox = getBoxAtPoint(point, boxes)
+      if (targetBox) {
+        const endAnchor = getBoxEdgePoint(
+          targetBox,
+          state.lastOutsidePoint ?? point,
+        )
+        const points =
+          state.points.length > 0
+            ? state.points.map((item, index, array) =>
+                index === array.length - 1 ? endAnchor : item,
+              )
+            : [endAnchor]
+        const connectionPoints = [state.startAnchor, ...points]
+        actions.push({
+          type: "incoming-connection-added",
+          fromId: state.sourceStub.id,
+          toId: targetBox.id,
+          points: connectionPoints,
+          sourceStub: state.sourceStub,
+        })
+        dragState = null
+        return actions
+      }
+
+      if (state.lineActive) {
+        actions.push({ type: "drag-clear" })
+      }
+      dragState = null
+      return actions
+    }
+
     const targetBox = getBoxAtPoint(point, boxes)
     const droppedOnOther = targetBox && targetBox.id !== state.startBox.id
     const moved = (state.moved && state.lineActive) || Boolean(droppedOnOther)
@@ -271,6 +366,7 @@ export const createDragStateMachine = (params?: {
 
   return {
     startDrag,
+    startIncomingDrag,
     moveDrag,
     endDrag,
     clear,

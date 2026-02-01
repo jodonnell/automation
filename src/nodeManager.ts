@@ -2,8 +2,13 @@ import type { Container } from "pixi.js"
 import { renderConnections } from "./renderer/connectionRenderer"
 import { createNode } from "./renderer/nodeRenderer"
 import type { GameModel } from "./core/model"
-import type { NodeSpec } from "./core/types"
+import type { IncomingStub, NodeSpec } from "./core/types"
+import { syncIncomingStubLabels } from "./core/incomingStubLabels"
 import type { NodeContainer } from "./renderer/types"
+
+export type IncomingStubHandlerRef = {
+  current?: (stub: IncomingStub, event: unknown) => void
+}
 
 export type NodeManager = {
   current: NodeContainer
@@ -19,6 +24,7 @@ export const createNodeManager = (
   getViewSize: () => { width: number; height: number },
   rootSpec: NodeSpec,
   model: GameModel,
+  incomingStubHandlerRef?: IncomingStubHandlerRef,
 ): NodeManager => {
   const positionNode = (node: NodeContainer) => {
     const { width, height } = getViewSize()
@@ -36,21 +42,25 @@ export const createNodeManager = (
   ) => {
     const cached = nodeCache.get(spec.id)
     if (cached && cached.nodeWidth === width && cached.nodeHeight === height) {
+      syncIncomingStubLabels(cached.boxLabels, model.getIncomingStubs(spec.id))
       renderConnections(
         cached,
         model.getConnections(spec.id),
         model.getIncomingStubs(spec.id),
         (connection) => model.removeConnectionWithStub(spec.id, connection),
+        incomingStubHandlerRef?.current,
       )
       return cached
     }
     const layout = model.getLayout(spec, width, height)
     const nextNode = createNode(spec, width, height, layout)
+    syncIncomingStubLabels(nextNode.boxLabels, model.getIncomingStubs(spec.id))
     renderConnections(
       nextNode,
       model.getConnections(spec.id),
       model.getIncomingStubs(spec.id),
       (connection) => model.removeConnectionWithStub(spec.id, connection),
+      incomingStubHandlerRef?.current,
     )
     nodeCache.set(spec.id, nextNode)
     return nextNode

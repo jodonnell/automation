@@ -5,6 +5,7 @@ export const ZOOM_OUT_DURATION = 360
 export const CONNECTION_STYLE = { width: 4, color: 0x1f1b16, alpha: 0.5 }
 export const FLOW_SPEED_PX_PER_SEC = 70
 export const FLOW_SPACING_PX = 30
+export const INCOMING_STUB_PREFIX = "incoming:"
 export const FLOW_TEXT_STYLE = {
   fontFamily: "Georgia, serif",
   fontSize: 20,

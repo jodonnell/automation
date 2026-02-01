@@ -5,6 +5,7 @@ import type {
   NodeSpec,
 } from "./types"
 import { computeLayout } from "./layout"
+import { INCOMING_STUB_PREFIX } from "../constants"
 
 export type GameModel = {
   getLayout: (spec: NodeSpec, width: number, height: number) => NodeLayout
@@ -16,6 +17,7 @@ export type GameModel = {
   addIncomingStub: (specId: string, stub: IncomingStub) => void
   removeIncomingStub: (specId: string, stub: IncomingStub) => void
   removeConnectionWithStub: (specId: string, connection: ConnectionPath) => void
+  createIncomingStubId: () => string
   onGraphChanged: (listener: (specId: string) => void) => () => void
 }
 
@@ -24,6 +26,7 @@ export const createGameModel = (): GameModel => {
   const connections = new Map<string, ConnectionPath[]>()
   const incomingStubs = new Map<string, IncomingStub[]>()
   const graphListeners = new Set<(specId: string) => void>()
+  let incomingStubCounter = 0
 
   const getLayout = (spec: NodeSpec, width: number, height: number) => {
     const key = `${spec.id}-${width}x${height}`
@@ -133,6 +136,11 @@ export const createGameModel = (): GameModel => {
     addIncomingStub,
     removeIncomingStub,
     removeConnectionWithStub,
+    createIncomingStubId: () => {
+      const nextId = `${INCOMING_STUB_PREFIX}${incomingStubCounter}`
+      incomingStubCounter += 1
+      return nextId
+    },
     onGraphChanged: (listener) => {
       graphListeners.add(listener)
       return () => graphListeners.delete(listener)

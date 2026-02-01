@@ -7,7 +7,8 @@ import { createGameModel } from "../core/model"
 import { setupDebug } from "../debug"
 import { renderConnections } from "../renderer/connectionRenderer"
 import { createPlaceableManager } from "../features/placeables/manager"
-import type { Bounds, NodeSpec } from "../core/types"
+import { syncIncomingStubLabels } from "../core/incomingStubLabels"
+import type { Bounds, IncomingStub, NodeSpec } from "../core/types"
 import type { Application } from "pixi.js"
 
 type SceneControllerDeps = {
@@ -36,21 +37,27 @@ export const createSceneController = ({
   })
 
   const model = createGameModel()
+  const incomingStubHandlerRef: {
+    current?: (stub: IncomingStub, event: unknown) => void
+  } = {}
   const nodeManager = createNodeManager(
     camera,
     getNodeSize,
     getViewSize,
     rootSpec,
     model,
+    incomingStubHandlerRef,
   )
   model.onGraphChanged((specId) => {
     const current = nodeManager.current
     if (current.specId !== specId) return
+    syncIncomingStubLabels(current.boxLabels, model.getIncomingStubs(specId))
     renderConnections(
       current,
       model.getConnections(specId),
       model.getIncomingStubs(specId),
       (connection) => model.removeConnectionWithStub(specId, connection),
+      incomingStubHandlerRef.current,
     )
   })
   const cameraController = createCameraController(camera)
@@ -104,6 +111,19 @@ export const createSceneController = ({
     onDeleteBox: placeableManager.deleteBox,
   })
   rebindBoxes = interactions.rebindBoxes
+  incomingStubHandlerRef.current = interactions.incomingStubPointerDown
+  syncIncomingStubLabels(
+    nodeManager.current.boxLabels,
+    model.getIncomingStubs(nodeManager.current.specId),
+  )
+  renderConnections(
+    nodeManager.current,
+    model.getConnections(nodeManager.current.specId),
+    model.getIncomingStubs(nodeManager.current.specId),
+    (connection) =>
+      model.removeConnectionWithStub(nodeManager.current.specId, connection),
+    incomingStubHandlerRef.current,
+  )
 
   app.ticker.add((ticker) => {
     cameraController.tick()

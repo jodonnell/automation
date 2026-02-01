@@ -17,7 +17,15 @@ export type ConnectionPath = {
   incomingStub?: IncomingStub
 }
 
+export type IncomingStubGeometry = {
+  start: PointData
+  end: PointData
+}
+
 export type IncomingStub = {
+  id: string
+  label: string
+  sourceId: string
   start: PointData
   end: PointData
 }

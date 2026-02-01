@@ -1,10 +1,10 @@
 import { Graphics, Point } from "pixi.js"
 import { CONNECTION_STYLE, DOUBLE_CLICK_MS } from "../../constants"
-import { canAddConnection } from "../../core/flowLabel"
+import { canAddConnection, resolveFlowLabel } from "../../core/flowLabel"
 import { createDragStateMachine } from "../../core/interactionState"
 import type { BoxInfo, DragAction } from "../../core/interactionState"
 import type { GameModel } from "../../core/model"
-import type { NodeSpec, PointData } from "../../core/types"
+import type { IncomingStub, NodeSpec, PointData } from "../../core/types"
 import { drawSmoothPath } from "../path"
 import type { NodeManager } from "../../nodeManager"
 import type { BoxContainer, NodeContainer } from "../types"
@@ -97,13 +97,26 @@ export const createDragInteractions = ({
           const currentConnections = model.getConnections(
             nodeManager.current.specId,
           )
+          const incomingLabel =
+            resolveFlowLabel(
+              action.fromId,
+              nodeManager.current.boxLabels,
+              currentConnections,
+            ) ?? nodeManager.current.boxLabels.get(action.fromId) ?? ""
+          const incomingStub: IncomingStub = {
+            id: model.createIncomingStubId(),
+            label: incomingLabel,
+            sourceId: action.fromId,
+            start: action.incomingStub.start,
+            end: action.incomingStub.end,
+          }
           if (
             !canAddConnection({
               connection: {
                 fromId: action.fromId,
                 toId: action.toId,
                 points: action.points,
-                incomingStub: action.incomingStub,
+                incomingStub,
               },
               connections: currentConnections,
               boxLabels: nodeManager.current.boxLabels,
@@ -116,7 +129,7 @@ export const createDragInteractions = ({
             fromId: action.fromId,
             toId: action.toId,
             points: action.points,
-            incomingStub: action.incomingStub,
+            incomingStub,
           })
           if (!added) {
             clearLine()
@@ -130,8 +143,46 @@ export const createDragInteractions = ({
           }) as BoxContainer | undefined
           const targetSpec = targetBox ? resolveSpecForBox(targetBox) : null
           if (targetSpec) {
-            model.addIncomingStub(targetSpec.id, action.incomingStub)
+            model.addIncomingStub(targetSpec.id, incomingStub)
           }
+          lineState.line = null
+          break
+        }
+        case "incoming-connection-added": {
+          if (!nodeManager.current.boxLabels.has(action.fromId)) {
+            nodeManager.current.boxLabels.set(
+              action.fromId,
+              action.sourceStub.label,
+            )
+          }
+          const currentConnections = model.getConnections(
+            nodeManager.current.specId,
+          )
+          if (
+            !canAddConnection({
+              connection: {
+                fromId: action.fromId,
+                toId: action.toId,
+                points: action.points,
+              },
+              connections: currentConnections,
+              boxLabels: nodeManager.current.boxLabels,
+            })
+          ) {
+            clearLine()
+            break
+          }
+          const added = model.addConnection(nodeManager.current.specId, {
+            fromId: action.fromId,
+            toId: action.toId,
+            points: action.points,
+          })
+          if (!added) {
+            clearLine()
+            break
+          }
+          const line = ensureLine()
+          drawConnection(line, action.points)
           lineState.line = null
           break
         }
@@ -173,9 +224,26 @@ export const createDragInteractions = ({
         if (button !== 0 || cameraController.isTweening) return
         clearDrag()
         const localPoint = getLocalPointFromEvent(event)
-        applyActions(state.startDrag(getBoxInfo(box), localPoint))
+    applyActions(state.startDrag(getBoxInfo(box), localPoint))
       })
     })
+  }
+
+  const handleIncomingStubPointerDown = (
+    stub: IncomingStub,
+    event: unknown,
+  ) => {
+    const button = (event as { button?: number }).button
+    if (button !== 0 || cameraController.isTweening) return
+    const stoppable = event as {
+      stopPropagation?: () => void
+      preventDefault?: () => void
+    }
+    stoppable.stopPropagation?.()
+    stoppable.preventDefault?.()
+    clearDrag()
+    const localPoint = getLocalPointFromEvent(event)
+    applyActions(state.startIncomingDrag(stub, localPoint))
   }
 
   const handlePointerMove = (event: unknown) => {
@@ -205,5 +273,10 @@ export const createDragInteractions = ({
     stage.on("pointerupoutside", handlePointerUp)
   }
 
-  return { bindBoxHandlers, attachStageHandlers, clearDrag }
+  return {
+    bindBoxHandlers,
+    attachStageHandlers,
+    clearDrag,
+    handleIncomingStubPointerDown,
+  }
 }

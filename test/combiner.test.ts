@@ -14,8 +14,23 @@ import { createNode } from "../src/renderer/nodeRenderer"
 import { createCombiner } from "../src/renderer/combinerRenderer"
 import { createPlaceableManager } from "../src/features/placeables/manager"
 import { renderConnections } from "../src/renderer/connectionRenderer"
+import { INCOMING_STUB_PREFIX } from "../src/constants"
 import type { NodeManager } from "../src/nodeManager"
 import type { NodeSpec } from "../src/core/types"
+
+const makeStub = (
+  id: string,
+  start: { x: number; y: number },
+  end: { x: number; y: number },
+  label = "",
+  sourceId = "",
+) => ({
+  id: id.startsWith(INCOMING_STUB_PREFIX) ? id : `${INCOMING_STUB_PREFIX}${id}`,
+  label,
+  sourceId,
+  start,
+  end,
+})
 
 const buildNode = (labels: string[]) => {
   const spec: NodeSpec = {
@@ -125,7 +140,7 @@ describe("combiner connections", () => {
       fromId: string
       toId: string
       points: { x: number; y: number }[]
-      incomingStub: { start: { x: number; y: number }; end: { x: number; y: number } }
+      incomingStub: ReturnType<typeof makeStub>
     }) => {
       const allowed = canAddConnection({
         connection,
@@ -143,7 +158,13 @@ describe("combiner connections", () => {
         { x: 10, y: 10 },
         { x: 20, y: 20 },
       ],
-      incomingStub: { start: { x: 20, y: 20 }, end: { x: 30, y: 20 } },
+      incomingStub: makeStub(
+        "incoming-0",
+        { x: 20, y: 20 },
+        { x: 30, y: 20 },
+        "1",
+        "root-0",
+      ),
     })
     const secondIncoming = tryAdd({
       fromId: "root-1",
@@ -152,7 +173,13 @@ describe("combiner connections", () => {
         { x: 30, y: 30 },
         { x: 40, y: 40 },
       ],
-      incomingStub: { start: { x: 40, y: 40 }, end: { x: 50, y: 40 } },
+      incomingStub: makeStub(
+        "incoming-1",
+        { x: 40, y: 40 },
+        { x: 50, y: 40 },
+        "2",
+        "root-1",
+      ),
     })
     const thirdIncoming = tryAdd({
       fromId: "root-2",
@@ -161,7 +188,13 @@ describe("combiner connections", () => {
         { x: 50, y: 50 },
         { x: 60, y: 60 },
       ],
-      incomingStub: { start: { x: 60, y: 60 }, end: { x: 70, y: 60 } },
+      incomingStub: makeStub(
+        "incoming-2",
+        { x: 60, y: 60 },
+        { x: 70, y: 60 },
+        "3",
+        "root-2",
+      ),
     })
     const firstOutgoing = tryAdd({
       fromId: combinerId,
@@ -170,7 +203,13 @@ describe("combiner connections", () => {
         { x: 70, y: 70 },
         { x: 80, y: 80 },
       ],
-      incomingStub: { start: { x: 80, y: 80 }, end: { x: 90, y: 80 } },
+      incomingStub: makeStub(
+        "incoming-3",
+        { x: 80, y: 80 },
+        { x: 90, y: 80 },
+        "12",
+        combinerId,
+      ),
     })
     const secondOutgoing = tryAdd({
       fromId: combinerId,
@@ -179,7 +218,13 @@ describe("combiner connections", () => {
         { x: 90, y: 90 },
         { x: 100, y: 100 },
       ],
-      incomingStub: { start: { x: 100, y: 100 }, end: { x: 110, y: 100 } },
+      incomingStub: makeStub(
+        "incoming-4",
+        { x: 100, y: 100 },
+        { x: 110, y: 100 },
+        "12",
+        combinerId,
+      ),
     })
 
     expect(firstIncoming).toBe(true)
@@ -204,7 +249,13 @@ describe("combiner connections", () => {
         { x: 10, y: 10 },
         { x: 20, y: 20 },
       ],
-      incomingStub: { start: { x: 20, y: 20 }, end: { x: 30, y: 20 } },
+      incomingStub: makeStub(
+        "incoming-5",
+        { x: 20, y: 20 },
+        { x: 30, y: 20 },
+        "1",
+        "root-0",
+      ),
     })
 
     const allowMixed = canAddConnection({
@@ -215,7 +266,13 @@ describe("combiner connections", () => {
           { x: 40, y: 40 },
           { x: 50, y: 50 },
         ],
-        incomingStub: { start: { x: 50, y: 50 }, end: { x: 60, y: 50 } },
+        incomingStub: makeStub(
+          "incoming-6",
+          { x: 50, y: 50 },
+          { x: 60, y: 50 },
+          "a",
+          "root-1",
+        ),
       },
       connections,
       boxLabels: node.boxLabels,
@@ -241,7 +298,13 @@ describe("combiner flows", () => {
           { x: 0, y: 0 },
           { x: 10, y: 0 },
         ],
-        incomingStub: { start: { x: 10, y: 0 }, end: { x: 15, y: 0 } },
+        incomingStub: makeStub(
+          "incoming-7",
+          { x: 10, y: 0 },
+          { x: 15, y: 0 },
+          "c",
+          "root-0",
+        ),
       },
       {
         fromId: "root-1",
@@ -250,7 +313,13 @@ describe("combiner flows", () => {
           { x: 0, y: 10 },
           { x: 10, y: 10 },
         ],
-        incomingStub: { start: { x: 10, y: 10 }, end: { x: 15, y: 10 } },
+        incomingStub: makeStub(
+          "incoming-8",
+          { x: 10, y: 10 },
+          { x: 15, y: 10 },
+          "a",
+          "root-1",
+        ),
       },
       {
         fromId: "combiner-0",
@@ -259,7 +328,13 @@ describe("combiner flows", () => {
           { x: 0, y: 20 },
           { x: 10, y: 20 },
         ],
-        incomingStub: { start: { x: 10, y: 20 }, end: { x: 15, y: 20 } },
+        incomingStub: makeStub(
+          "incoming-9",
+          { x: 10, y: 20 },
+          { x: 15, y: 20 },
+          "ca",
+          "combiner-0",
+        ),
       },
     ]
 
@@ -286,7 +361,13 @@ describe("combiner flows", () => {
           { x: 0, y: 0 },
           { x: 10, y: 0 },
         ],
-        incomingStub: { start: { x: 10, y: 0 }, end: { x: 15, y: 0 } },
+        incomingStub: makeStub(
+          "incoming-10",
+          { x: 10, y: 0 },
+          { x: 15, y: 0 },
+          "1",
+          "root-0",
+        ),
       },
       {
         fromId: "combiner-0",
@@ -295,7 +376,13 @@ describe("combiner flows", () => {
           { x: 0, y: 20 },
           { x: 10, y: 20 },
         ],
-        incomingStub: { start: { x: 10, y: 20 }, end: { x: 15, y: 20 } },
+        incomingStub: makeStub(
+          "incoming-11",
+          { x: 10, y: 20 },
+          { x: 15, y: 20 },
+          "1",
+          "combiner-0",
+        ),
       },
     ]
 
@@ -317,7 +404,13 @@ describe("combiner flows", () => {
             { x: 0, y: 30 },
             { x: 10, y: 30 },
           ],
-          incomingStub: { start: { x: 10, y: 30 }, end: { x: 15, y: 30 } },
+          incomingStub: makeStub(
+            "incoming-12",
+            { x: 10, y: 30 },
+            { x: 15, y: 30 },
+            "2",
+            "root-1",
+          ),
         },
       ],
     )

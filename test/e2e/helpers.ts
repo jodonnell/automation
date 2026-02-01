@@ -20,10 +20,14 @@ type GameWindow = typeof window & {
           position?: { x: number; y: number }
           connectionLayer?: { children?: unknown[] }
           flowLayer?: { children?: unknown[] }
+          incomingLayer?: { children?: unknown[] }
         }>
       }
     }
-    model?: { getConnections?: (specId: string) => unknown[] }
+    model?: {
+      getConnections?: (specId: string) => unknown[]
+      getIncomingStubs?: (specId: string) => unknown[]
+    }
   }
 }
 
@@ -69,6 +73,32 @@ export const getBoxCenters = async (
     return acc
   }, {})
 }
+
+export const getBoxScreenCenter = async (
+  page: Page,
+  id: string,
+): Promise<{ x: number; y: number } | null> =>
+  page.evaluate((boxId) => {
+    const game = (window as GameWindow).game
+    const node = game?.nodeManager?.current
+    const child = node?.children?.find(
+      (item) => (item as { name?: string })?.name === boxId,
+    ) as
+      | {
+          getBounds?: () => {
+            x?: number
+            y?: number
+            width?: number
+            height?: number
+          }
+        }
+      | undefined
+    const bounds = child?.getBounds?.()
+    if (!bounds) return null
+    const x = (bounds.x ?? 0) + (bounds.width ?? 0) / 2
+    const y = (bounds.y ?? 0) + (bounds.height ?? 0) / 2
+    return { x, y }
+  }, id)
 
 export const getNodeSize = async (page: Page) =>
   page.evaluate(() => {
@@ -133,6 +163,54 @@ export const getConnectionCount = async (page: Page): Promise<number> =>
     const specId = game?.nodeManager?.current?.specId ?? ""
     const connections = game?.model?.getConnections?.(specId) ?? []
     return connections.length
+  })
+
+export const getIncomingStubEnds = async (
+  page: Page,
+): Promise<Array<{ id: string; x: number; y: number }>> =>
+  page.evaluate(() => {
+    const game = (window as GameWindow).game
+    const specId = game?.nodeManager?.current?.specId ?? ""
+    const stubs = game?.model?.getIncomingStubs?.(specId) ?? []
+    return stubs
+      .map((stub) => {
+        if (!stub || typeof stub !== "object") return null
+        const candidate = stub as {
+          id?: unknown
+          end?: { x?: unknown; y?: unknown }
+        }
+        const id = typeof candidate.id === "string" ? candidate.id : ""
+        const x = candidate.end?.x
+        const y = candidate.end?.y
+        if (typeof x !== "number" || typeof y !== "number") return null
+        return { id, x, y }
+      })
+      .filter((item): item is { id: string; x: number; y: number } =>
+        Boolean(item),
+      )
+  })
+
+export const getIncomingStubScreenPoint = async (
+  page: Page,
+): Promise<{ x: number; y: number } | null> =>
+  page.evaluate(() => {
+    const game = (window as GameWindow).game
+    const node = game?.nodeManager?.current
+    const line = node?.incomingLayer?.children?.[0] as
+      | {
+          getBounds?: () => {
+            x?: number
+            y?: number
+            width?: number
+            height?: number
+          }
+        }
+      | undefined
+    const bounds = line?.getBounds?.()
+    if (!bounds) return null
+    const x = (bounds.x ?? 0) + (bounds.width ?? 0) / 2
+    const y = (bounds.y ?? 0) + (bounds.height ?? 0) / 2
+    return { x, y }
   })
 
 export const getRenderCounts = async (page: Page) =>

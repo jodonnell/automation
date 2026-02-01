@@ -1,4 +1,4 @@
-import { Graphics, Text } from "pixi.js"
+import { Graphics, Rectangle, Text } from "pixi.js"
 import {
   CONNECTION_STYLE,
   FLOW_SPEED_PX_PER_SEC,
@@ -62,6 +62,7 @@ export const renderConnections = (
   connections: ConnectionPath[],
   incoming: IncomingStub[],
   onConnectionRightClick?: (connection: ConnectionPath) => void,
+  onIncomingStubPointerDown?: (stub: IncomingStub, event: unknown) => void,
 ) => {
   node.connectionLayer.removeChildren()
   node.flowLayer.removeChildren()
@@ -122,6 +123,32 @@ export const renderConnections = (
   incoming.forEach((stub) => {
     const line = new Graphics()
     drawSmoothPath(line, [stub.start, stub.end], CONNECTION_STYLE)
+    if (onIncomingStubPointerDown) {
+      const minX = Math.min(stub.start.x, stub.end.x)
+      const minY = Math.min(stub.start.y, stub.end.y)
+      const width = Math.abs(stub.end.x - stub.start.x)
+      const height = Math.abs(stub.end.y - stub.start.y)
+      const padding = Math.max(CONNECTION_STYLE.width * 2, 8)
+      line.hitArea = new Rectangle(
+        minX - padding,
+        minY - padding,
+        Math.max(1, width + padding * 2),
+        Math.max(1, height + padding * 2),
+      )
+      line.eventMode = "static"
+      line.cursor = "grab"
+      line.on("pointerdown", (event) => {
+        const button = (event as { button?: number }).button
+        if (button !== 0) return
+        const stoppable = event as {
+          stopPropagation?: () => void
+          preventDefault?: () => void
+        }
+        stoppable.stopPropagation?.()
+        stoppable.preventDefault?.()
+        onIncomingStubPointerDown(stub, event)
+      })
+    }
     node.incomingLayer.addChild(line)
   })
 

@@ -12,8 +12,23 @@ import { createConverter } from "../src/renderer/converterRenderer"
 import { createPlaceableManager } from "../src/features/placeables/manager"
 import { createDragInteractions } from "../src/renderer/interactions/drag"
 import { renderConnections } from "../src/renderer/connectionRenderer"
+import { INCOMING_STUB_PREFIX } from "../src/constants"
 import type { NodeManager } from "../src/nodeManager"
 import type { NodeSpec } from "../src/core/types"
+
+const makeStub = (
+  id: string,
+  start: { x: number; y: number },
+  end: { x: number; y: number },
+  label = "",
+  sourceId = "",
+) => ({
+  id: id.startsWith(INCOMING_STUB_PREFIX) ? id : `${INCOMING_STUB_PREFIX}${id}`,
+  label,
+  sourceId,
+  start,
+  end,
+})
 
 const buildNode = () => {
   const spec: NodeSpec = {
@@ -156,7 +171,13 @@ describe("placeable manager", () => {
       fromId: "root-A",
       toId: "root-A",
       points: connectionPoints,
-      incomingStub: { start: connectionPoints[1], end: { x: 330, y: 100 } },
+      incomingStub: makeStub(
+        "incoming-0",
+        connectionPoints[1],
+        { x: 330, y: 100 },
+        "A",
+        "root-A",
+      ),
     })
 
     pointerMove({ global: { x: 200, y: 100 } })
@@ -195,7 +216,13 @@ describe("placeable manager", () => {
         { x: 130, y: 130 },
         { x: 200, y: 200 },
       ],
-      incomingStub: { start: { x: 200, y: 200 }, end: { x: 230, y: 200 } },
+      incomingStub: makeStub(
+        "incoming-1",
+        { x: 200, y: 200 },
+        { x: 230, y: 200 },
+        "1",
+        "converter-0",
+      ),
     })
 
     const drag = createDragInteractions({
@@ -240,7 +267,7 @@ describe("converter connections", () => {
       fromId: string
       toId: string
       points: { x: number; y: number }[]
-      incomingStub: { start: { x: number; y: number }; end: { x: number; y: number } }
+      incomingStub: ReturnType<typeof makeStub>
     }) => {
       const allowed = canAddConnection({
         connection,
@@ -258,7 +285,13 @@ describe("converter connections", () => {
         { x: 10, y: 10 },
         { x: 20, y: 20 },
       ],
-      incomingStub: { start: { x: 20, y: 20 }, end: { x: 30, y: 20 } },
+      incomingStub: makeStub(
+        "incoming-2",
+        { x: 20, y: 20 },
+        { x: 30, y: 20 },
+        "A",
+        "root-A",
+      ),
     })
     const secondIncoming = tryAdd({
       fromId: "root-B",
@@ -267,7 +300,13 @@ describe("converter connections", () => {
         { x: 30, y: 30 },
         { x: 40, y: 40 },
       ],
-      incomingStub: { start: { x: 40, y: 40 }, end: { x: 50, y: 40 } },
+      incomingStub: makeStub(
+        "incoming-3",
+        { x: 40, y: 40 },
+        { x: 50, y: 40 },
+        "B",
+        "root-B",
+      ),
     })
     const firstOutgoing = tryAdd({
       fromId: converterId,
@@ -276,7 +315,13 @@ describe("converter connections", () => {
         { x: 50, y: 50 },
         { x: 60, y: 60 },
       ],
-      incomingStub: { start: { x: 60, y: 60 }, end: { x: 70, y: 60 } },
+      incomingStub: makeStub(
+        "incoming-4",
+        { x: 60, y: 60 },
+        { x: 70, y: 60 },
+        "1",
+        converterId,
+      ),
     })
     const secondOutgoing = tryAdd({
       fromId: converterId,
@@ -285,7 +330,13 @@ describe("converter connections", () => {
         { x: 70, y: 70 },
         { x: 80, y: 80 },
       ],
-      incomingStub: { start: { x: 80, y: 80 }, end: { x: 90, y: 80 } },
+      incomingStub: makeStub(
+        "incoming-5",
+        { x: 80, y: 80 },
+        { x: 90, y: 80 },
+        "1",
+        converterId,
+      ),
     })
 
     expect(firstIncoming).toBe(true)
@@ -312,7 +363,13 @@ describe("converter flows", () => {
           { x: 0, y: 0 },
           { x: 10, y: 0 },
         ],
-        incomingStub: { start: { x: 10, y: 0 }, end: { x: 15, y: 0 } },
+        incomingStub: makeStub(
+          "incoming-6",
+          { x: 10, y: 0 },
+          { x: 15, y: 0 },
+          "A",
+          "root-A",
+        ),
       },
       {
         fromId: "converter-0",
@@ -321,7 +378,13 @@ describe("converter flows", () => {
           { x: 0, y: 10 },
           { x: 10, y: 10 },
         ],
-        incomingStub: { start: { x: 10, y: 10 }, end: { x: 15, y: 10 } },
+        incomingStub: makeStub(
+          "incoming-7",
+          { x: 10, y: 10 },
+          { x: 15, y: 10 },
+          "1",
+          "converter-0",
+        ),
       },
     ]
 
@@ -330,5 +393,59 @@ describe("converter flows", () => {
     const glyphs = node.flowLayer.children as Array<{ text: string }>
     expect(glyphs[0].text).toBe("a")
     expect(glyphs[1].text).toBe("1")
+  })
+})
+
+describe("incoming stub interactions", () => {
+  it("extends an incoming stub into a converter connection", () => {
+    const node = buildNode()
+    const converter = createConverter(40, "1/a", "converter-0")
+    converter.position.set(200, 200)
+    node.addChild(converter)
+    node.boxLabels.set("converter-0", "1/a")
+
+    const model = createGameModel()
+    const nodeManager = { current: node } as NodeManager
+    const stage = new Container()
+
+    const drag = createDragInteractions({
+      nodeManager,
+      model,
+      cameraController: { isTweening: false },
+      resolveSpecForBox: () => null,
+      onDoubleClick: vi.fn(),
+    })
+    drag.attachStageHandlers(stage)
+
+    const stub = makeStub(
+      "incoming-8",
+      { x: 30, y: 20 },
+      { x: 60, y: 20 },
+      "A",
+      "root-A",
+    )
+    model.addIncomingStub(node.specId, stub)
+
+    renderConnections(node, [], [stub], undefined, drag.handleIncomingStubPointerDown)
+
+    const line = node.incomingLayer.children[0] as {
+      _listeners?: Record<string, (event: any) => void>
+    }
+    line._listeners?.pointerdown?.({
+      button: 0,
+      global: { x: stub.end.x, y: stub.end.y },
+      stopPropagation: vi.fn(),
+      preventDefault: vi.fn(),
+    })
+    ;(stage as unknown as { _listeners: Record<string, any> })._listeners
+      .pointermove({ global: { x: 220, y: 220 } })
+    ;(stage as unknown as { _listeners: Record<string, any> })._listeners
+      .pointerup({ global: { x: 220, y: 220 } })
+
+    const connections = model.getConnections(node.specId)
+    expect(connections).toHaveLength(1)
+    expect(connections[0].fromId).toBe(stub.id)
+    expect(connections[0].toId).toBe("converter-0")
+    expect(node.boxLabels.get(stub.id)).toBe("A")
   })
 })

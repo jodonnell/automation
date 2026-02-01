@@ -91,5 +91,6 @@ export const setupInteractions = ({
 
   return {
     rebindBoxes: () => drag.bindBoxHandlers(nodeManager.current),
+    incomingStubPointerDown: drag.handleIncomingStubPointerDown,
   }
 }
