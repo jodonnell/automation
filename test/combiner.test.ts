@@ -134,6 +134,9 @@ describe("combiner connections", () => {
       ["root-0", "1"],
       ["root-1", "2"],
       ["root-2", "3"],
+      ["converter-0", "1"],
+      ["converter-1", "2"],
+      ["converter-2", "3"],
     ])
 
     const tryAdd = (connection: {
@@ -146,13 +149,14 @@ describe("combiner connections", () => {
         connection,
         connections: model.getConnections(specId),
         boxLabels,
+        resourceNodeIds: new Set(["root-0", "root-1", "root-2"]),
       })
       if (!allowed) return false
       return model.addConnection(specId, connection)
     }
 
     const firstIncoming = tryAdd({
-      fromId: "root-0",
+      fromId: "converter-0",
       toId: combinerId,
       points: [
         { x: 10, y: 10 },
@@ -163,11 +167,11 @@ describe("combiner connections", () => {
         { x: 20, y: 20 },
         { x: 30, y: 20 },
         "1",
-        "root-0",
+        "converter-0",
       ),
     })
     const secondIncoming = tryAdd({
-      fromId: "root-1",
+      fromId: "converter-1",
       toId: combinerId,
       points: [
         { x: 30, y: 30 },
@@ -178,11 +182,11 @@ describe("combiner connections", () => {
         { x: 40, y: 40 },
         { x: 50, y: 40 },
         "2",
-        "root-1",
+        "converter-1",
       ),
     })
     const thirdIncoming = tryAdd({
-      fromId: "root-2",
+      fromId: "converter-2",
       toId: combinerId,
       points: [
         { x: 50, y: 50 },
@@ -193,7 +197,7 @@ describe("combiner connections", () => {
         { x: 60, y: 60 },
         { x: 70, y: 60 },
         "3",
-        "root-2",
+        "converter-2",
       ),
     })
     const firstOutgoing = tryAdd({
@@ -241,9 +245,11 @@ describe("combiner connections", () => {
     const connections = model.getConnections(node.specId)
     const combinerId = "combiner-0"
     node.boxLabels.set(combinerId, "+")
+    node.boxLabels.set("converter-0", "1")
+    node.boxLabels.set("converter-1", "a")
 
     connections.push({
-      fromId: "root-0",
+      fromId: "converter-0",
       toId: combinerId,
       points: [
         { x: 10, y: 10 },
@@ -254,13 +260,13 @@ describe("combiner connections", () => {
         { x: 20, y: 20 },
         { x: 30, y: 20 },
         "1",
-        "root-0",
+        "converter-0",
       ),
     })
 
     const allowMixed = canAddConnection({
       connection: {
-        fromId: "root-1",
+        fromId: "converter-1",
         toId: combinerId,
         points: [
           { x: 40, y: 40 },
@@ -271,11 +277,12 @@ describe("combiner connections", () => {
           { x: 50, y: 50 },
           { x: 60, y: 50 },
           "a",
-          "root-1",
+          "converter-1",
         ),
       },
       connections,
       boxLabels: node.boxLabels,
+      resourceNodeIds: new Set(["root-0", "root-1"]),
     })
 
     expect(allowMixed).toBe(false)

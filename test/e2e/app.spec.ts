@@ -283,7 +283,7 @@ test("combiner combines two letter inputs in order", async ({ page }) => {
   await page.keyboard.press("2")
   await waitForBoxWithPrefix(page, "combiner-")
 
-  const centers = await getBoxCenters(page, ["root-C", "root-A", "root-T"])
+  const centers = await getBoxCenters(page, ["root-A", "root-T"])
   const updatedBoxes = await getBoxes(page)
   const combiner = updatedBoxes.find((box) => box.id.startsWith("combiner-"))
   expect(combiner).toBeTruthy()
@@ -292,7 +292,7 @@ test("combiner combines two letter inputs in order", async ({ page }) => {
     y: origin.y + (combiner?.y ?? 0) + (combiner?.size ?? 0) / 2,
   }
 
-  await dragBetween(page, centers["root-C"], combinerCenter)
+  await dragBetween(page, centers["root-A"], combinerCenter)
   await waitForConnection(page)
   await dragBetween(page, centers["root-A"], combinerCenter)
   await waitForConnection(page)
@@ -318,5 +318,5 @@ test("combiner combines two letter inputs in order", async ({ page }) => {
     "root-T",
   )
   expect(flowTexts.length).toBeGreaterThan(0)
-  expect(flowTexts).toContain("ca")
+  expect(flowTexts).toContain("aa")
 })

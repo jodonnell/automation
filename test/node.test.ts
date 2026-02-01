@@ -3,9 +3,12 @@ import { createPixiMock } from "./helpers/pixiMock"
 
 vi.mock("pixi.js", () => createPixiMock())
 
-import { createNode } from "../src/renderer/nodeRenderer"
+import {
+  createNode,
+  updateResourceNodeOutboundCounts,
+} from "../src/renderer/nodeRenderer"
 import { computeLayout } from "../src/core/layout"
-import type { NodeSpec } from "../src/core/types"
+import type { ConnectionPath, NodeSpec } from "../src/core/types"
 
 const nonOverlapping = (a: { x: number; y: number; size: number }, b: { x: number; y: number; size: number }) => {
   return !(
@@ -85,5 +88,65 @@ describe("createNode", () => {
       expect(firstPos.x).toBeCloseTo(secondPos.x, 6)
       expect(firstPos.y).toBeCloseTo(secondPos.y, 6)
     })
+  })
+
+  it("shows default outbound counts on resource nodes", () => {
+    const width = 400
+    const height = 300
+    const spec: NodeSpec = {
+      id: "root",
+      label: "",
+      children: [
+        { id: "a", label: "A" },
+        { id: "b", label: "B" },
+        { id: "c", label: "C" },
+      ],
+    }
+    const layout = computeLayout(spec, width, height)
+    const node = createNode(spec, width, height, layout)
+    updateResourceNodeOutboundCounts(node, [])
+
+    const boxes = node.children.filter((child: any) => "boxSize" in child)
+    const counts = boxes.map((box: any) => ({
+      id: box.name,
+      count: box.countText?.text,
+    }))
+
+    const byId = new Map(counts.map((item) => [item.id, item.count]))
+    expect(byId.get("a")).toBe("3")
+    expect(byId.get("b")).toBe("0")
+    expect(byId.get("c")).toBe("0")
+  })
+
+  it("updates outbound counts based on connections", () => {
+    const width = 400
+    const height = 300
+    const spec: NodeSpec = {
+      id: "root",
+      label: "",
+      children: [
+        { id: "a", label: "A" },
+        { id: "b", label: "B" },
+        { id: "c", label: "C" },
+      ],
+    }
+    const layout = computeLayout(spec, width, height)
+    const node = createNode(spec, width, height, layout)
+    const connections: ConnectionPath[] = [
+      { fromId: "a", toId: "b", points: [] },
+      { fromId: "a", toId: "c", points: [] },
+    ]
+    updateResourceNodeOutboundCounts(node, connections)
+
+    const boxes = node.children.filter((child: any) => "boxSize" in child)
+    const counts = boxes.map((box: any) => ({
+      id: box.name,
+      count: box.countText?.text,
+    }))
+
+    const byId = new Map(counts.map((item) => [item.id, item.count]))
+    expect(byId.get("a")).toBe("1")
+    expect(byId.get("b")).toBe("0")
+    expect(byId.get("c")).toBe("0")
   })
 })

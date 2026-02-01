@@ -261,7 +261,12 @@ describe("converter connections", () => {
     const model = createGameModel()
     const specId = "root"
     const converterId = "converter-0"
-    const boxLabels = new Map<string, string>()
+    const boxLabels = new Map<string, string>([
+      ["root-A", "A"],
+      ["root-B", "B"],
+      ["root-C", "C"],
+    ])
+    const resourceNodeIds = new Set(["root-A", "root-B", "root-C"])
 
     const tryAdd = (connection: {
       fromId: string
@@ -273,6 +278,7 @@ describe("converter connections", () => {
         connection,
         connections: model.getConnections(specId),
         boxLabels,
+        resourceNodeIds,
       })
       if (!allowed) return false
       return model.addConnection(specId, connection)

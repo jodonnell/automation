@@ -7,6 +7,7 @@ import {
 } from "../constants"
 import { resolveFlowLabel } from "../core/flowLabel"
 import { drawSmoothPath, smoothPath } from "./path"
+import { updateResourceNodeOutboundCounts } from "./nodeRenderer"
 import type { ConnectionPath, IncomingStub } from "../core/types"
 import type { NodeContainer } from "./types"
 
@@ -64,6 +65,7 @@ export const renderConnections = (
   onConnectionRightClick?: (connection: ConnectionPath) => void,
   onIncomingStubPointerDown?: (stub: IncomingStub, event: unknown) => void,
 ) => {
+  updateResourceNodeOutboundCounts(node, connections)
   node.connectionLayer.removeChildren()
   node.flowLayer.removeChildren()
   node.incomingLayer.removeChildren()

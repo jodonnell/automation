@@ -1,6 +1,11 @@
-import type { Container } from "pixi.js"
+import type { Container, Text } from "pixi.js"
 
-export type BoxContainer = Container & { boxSize: number }
+export type BoxContainer = Container & {
+  boxSize: number
+  isResourceNode?: boolean
+  labelText?: Text
+  countText?: Text
+}
 export type NodeContainer = Container & {
   nodeWidth: number
   nodeHeight: number
@@ -9,5 +14,6 @@ export type NodeContainer = Container & {
   incomingLayer: Container
   specId: string
   boxLabels: Map<string, string>
+  resourceNodeIds: Set<string>
   updateFlows?: (deltaMs: number) => void
 }

@@ -120,6 +120,7 @@ export const createDragInteractions = ({
               },
               connections: currentConnections,
               boxLabels: nodeManager.current.boxLabels,
+              resourceNodeIds: nodeManager.current.resourceNodeIds,
             })
           ) {
             clearLine()
@@ -167,6 +168,7 @@ export const createDragInteractions = ({
               },
               connections: currentConnections,
               boxLabels: nodeManager.current.boxLabels,
+              resourceNodeIds: nodeManager.current.resourceNodeIds,
             })
           ) {
             clearLine()
