@@ -7,6 +7,7 @@ import { Container } from "pixi.js"
 import { computeLayout } from "../src/core/layout"
 import { createGameModel } from "../src/core/model"
 import { canAddConnection } from "../src/core/flowLabel"
+import { convertLabel } from "../src/core/converter"
 import { createNode } from "../src/renderer/nodeRenderer"
 import { createConverter } from "../src/renderer/converterRenderer"
 import { createPlaceableManager } from "../src/features/placeables/manager"
@@ -41,6 +42,15 @@ const buildNode = () => {
   const layout = computeLayout(spec, width, height)
   return createNode(spec, width, height, layout)
 }
+
+describe("convertLabel", () => {
+  it("multiplies multi-letter labels into a number", () => {
+    expect(convertLabel("bb")).toBe("4")
+    expect(convertLabel("aaa")).toBe("1")
+    expect(convertLabel("abc")).toBe("6")
+    expect(convertLabel("Az")).toBe("26")
+  })
+})
 
 describe("createConverter", () => {
   it("renders a circular converter with text", () => {

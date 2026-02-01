@@ -5,9 +5,16 @@ export const isConverterId = (id: string) => id.startsWith(CONVERTER_ID_PREFIX)
 export const convertLabel = (label: string) => {
   const trimmed = label.trim()
   if (!trimmed) return label
-  if (/^[a-z]$/i.test(trimmed)) {
-    const code = trimmed.toUpperCase().charCodeAt(0) - 64
-    if (code >= 1 && code <= 26) return String(code)
+  if (/^[a-z]+$/i.test(trimmed)) {
+    const product = trimmed
+      .toUpperCase()
+      .split("")
+      .reduce((acc, letter) => {
+        const code = letter.charCodeAt(0) - 64
+        if (code < 1 || code > 26) return NaN
+        return acc * code
+      }, 1)
+    if (Number.isFinite(product)) return String(product)
   }
   if (/^\d+$/.test(trimmed)) {
     const value = Number(trimmed)
