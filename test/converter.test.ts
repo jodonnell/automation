@@ -6,6 +6,7 @@ vi.mock("pixi.js", () => createPixiMock())
 import { Container } from "pixi.js"
 import { computeLayout } from "../src/core/layout"
 import { createGameModel } from "../src/core/model"
+import { canAddConnection } from "../src/core/flowLabel"
 import { createNode } from "../src/renderer/nodeRenderer"
 import { createConverter } from "../src/renderer/converterRenderer"
 import { createPlaceableManager } from "../src/features/placeables/manager"
@@ -233,8 +234,24 @@ describe("converter connections", () => {
     const model = createGameModel()
     const specId = "root"
     const converterId = "converter-0"
+    const boxLabels = new Map<string, string>()
 
-    const firstIncoming = model.addConnection(specId, {
+    const tryAdd = (connection: {
+      fromId: string
+      toId: string
+      points: { x: number; y: number }[]
+      incomingStub: { start: { x: number; y: number }; end: { x: number; y: number } }
+    }) => {
+      const allowed = canAddConnection({
+        connection,
+        connections: model.getConnections(specId),
+        boxLabels,
+      })
+      if (!allowed) return false
+      return model.addConnection(specId, connection)
+    }
+
+    const firstIncoming = tryAdd({
       fromId: "root-A",
       toId: converterId,
       points: [
@@ -243,7 +260,7 @@ describe("converter connections", () => {
       ],
       incomingStub: { start: { x: 20, y: 20 }, end: { x: 30, y: 20 } },
     })
-    const secondIncoming = model.addConnection(specId, {
+    const secondIncoming = tryAdd({
       fromId: "root-B",
       toId: converterId,
       points: [
@@ -252,7 +269,7 @@ describe("converter connections", () => {
       ],
       incomingStub: { start: { x: 40, y: 40 }, end: { x: 50, y: 40 } },
     })
-    const firstOutgoing = model.addConnection(specId, {
+    const firstOutgoing = tryAdd({
       fromId: converterId,
       toId: "root-A",
       points: [
@@ -261,7 +278,7 @@ describe("converter connections", () => {
       ],
       incomingStub: { start: { x: 60, y: 60 }, end: { x: 70, y: 60 } },
     })
-    const secondOutgoing = model.addConnection(specId, {
+    const secondOutgoing = tryAdd({
       fromId: converterId,
       toId: "root-C",
       points: [

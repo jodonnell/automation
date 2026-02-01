@@ -7,7 +7,7 @@ import { Container } from "pixi.js"
 import { computeLayout } from "../src/core/layout"
 import { createGameModel } from "../src/core/model"
 import {
-  canAcceptCombinerIncoming,
+  canAddConnection,
   resolveFlowLabel,
 } from "../src/core/flowLabel"
 import { createNode } from "../src/renderer/nodeRenderer"
@@ -115,8 +115,28 @@ describe("combiner connections", () => {
     const model = createGameModel()
     const specId = "root"
     const combinerId = "combiner-0"
+    const boxLabels = new Map<string, string>([
+      ["root-0", "1"],
+      ["root-1", "2"],
+      ["root-2", "3"],
+    ])
 
-    const firstIncoming = model.addConnection(specId, {
+    const tryAdd = (connection: {
+      fromId: string
+      toId: string
+      points: { x: number; y: number }[]
+      incomingStub: { start: { x: number; y: number }; end: { x: number; y: number } }
+    }) => {
+      const allowed = canAddConnection({
+        connection,
+        connections: model.getConnections(specId),
+        boxLabels,
+      })
+      if (!allowed) return false
+      return model.addConnection(specId, connection)
+    }
+
+    const firstIncoming = tryAdd({
       fromId: "root-0",
       toId: combinerId,
       points: [
@@ -125,7 +145,7 @@ describe("combiner connections", () => {
       ],
       incomingStub: { start: { x: 20, y: 20 }, end: { x: 30, y: 20 } },
     })
-    const secondIncoming = model.addConnection(specId, {
+    const secondIncoming = tryAdd({
       fromId: "root-1",
       toId: combinerId,
       points: [
@@ -134,7 +154,7 @@ describe("combiner connections", () => {
       ],
       incomingStub: { start: { x: 40, y: 40 }, end: { x: 50, y: 40 } },
     })
-    const thirdIncoming = model.addConnection(specId, {
+    const thirdIncoming = tryAdd({
       fromId: "root-2",
       toId: combinerId,
       points: [
@@ -143,7 +163,7 @@ describe("combiner connections", () => {
       ],
       incomingStub: { start: { x: 60, y: 60 }, end: { x: 70, y: 60 } },
     })
-    const firstOutgoing = model.addConnection(specId, {
+    const firstOutgoing = tryAdd({
       fromId: combinerId,
       toId: "root-0",
       points: [
@@ -152,7 +172,7 @@ describe("combiner connections", () => {
       ],
       incomingStub: { start: { x: 80, y: 80 }, end: { x: 90, y: 80 } },
     })
-    const secondOutgoing = model.addConnection(specId, {
+    const secondOutgoing = tryAdd({
       fromId: combinerId,
       toId: "root-1",
       points: [
@@ -187,9 +207,16 @@ describe("combiner connections", () => {
       incomingStub: { start: { x: 20, y: 20 }, end: { x: 30, y: 20 } },
     })
 
-    const allowMixed = canAcceptCombinerIncoming({
-      combinerId,
-      fromId: "root-1",
+    const allowMixed = canAddConnection({
+      connection: {
+        fromId: "root-1",
+        toId: combinerId,
+        points: [
+          { x: 40, y: 40 },
+          { x: 50, y: 50 },
+        ],
+        incomingStub: { start: { x: 50, y: 50 }, end: { x: 60, y: 50 } },
+      },
       connections,
       boxLabels: node.boxLabels,
     })
