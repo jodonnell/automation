@@ -71,7 +71,7 @@ test("zooming into a node clears connection rendering", async ({ page }) => {
 
   const renderedCounts = await getRenderCounts(page)
   expect(renderedCounts.connections).toBe(0)
-  expect(renderedCounts.flows).toBe(0)
+  expect(renderedCounts.flows).toBeGreaterThan(0)
 })
 
 test("incoming stubs can extend into a converter inside zoomed context", async ({

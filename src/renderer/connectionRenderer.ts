@@ -150,6 +150,30 @@ export const renderConnections = (
       })
     }
     node.incomingLayer.addChild(line)
+
+    const label = stub.label?.trim()
+    if (!label) return
+    const path = buildPathSample([stub.start, stub.end])
+    if (path.length <= 1) return
+    const glyphCount = Math.max(1, Math.floor(path.length / FLOW_SPACING_PX))
+    const glyphs: Text[] = []
+    for (let i = 0; i < glyphCount; i += 1) {
+      const glyph = new Text({
+        text: label.toLowerCase(),
+        style: FLOW_TEXT_STYLE,
+      })
+      glyph.anchor.set(0.5)
+      glyph.alpha = 0.95
+      node.flowLayer.addChild(glyph)
+      glyphs.push(glyph)
+    }
+    flows.push({
+      path,
+      glyphs,
+      spacing: FLOW_SPACING_PX,
+      speed: FLOW_SPEED_PX_PER_SEC,
+      offset: Math.random() * FLOW_SPACING_PX,
+    })
   })
 
   if (flows.length > 0) {
