@@ -5,7 +5,7 @@ import {
   FLOW_SPACING_PX,
   FLOW_TEXT_STYLE,
 } from "../constants"
-import { convertLabel, isConverterId } from "../core/converter"
+import { resolveFlowLabel } from "../core/flowLabel"
 import { drawSmoothPath, smoothPath } from "./path"
 import type { ConnectionPath, IncomingStub } from "../core/types"
 import type { NodeContainer } from "./types"
@@ -55,28 +55,6 @@ const getPointAtDistance = (path: PathSample, distance: number) => {
     x: prev.x + (next.x - prev.x) * t,
     y: prev.y + (next.y - prev.y) * t,
   }
-}
-
-const resolveFlowLabel = (
-  boxId: string,
-  boxLabels: Map<string, string>,
-  connections: ConnectionPath[],
-  visited = new Set<string>(),
-) => {
-  const directLabel = boxLabels.get(boxId)
-  if (!isConverterId(boxId)) return directLabel
-  if (visited.has(boxId)) return directLabel
-  visited.add(boxId)
-  const incoming = connections.find((connection) => connection.toId === boxId)
-  if (!incoming) return directLabel
-  const upstream = resolveFlowLabel(
-    incoming.fromId,
-    boxLabels,
-    connections,
-    visited,
-  )
-  if (!upstream) return directLabel
-  return convertLabel(upstream)
 }
 
 export const renderConnections = (

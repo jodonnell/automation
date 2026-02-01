@@ -1,5 +1,7 @@
 import { CONVERTER_ID_PREFIX } from "../../core/converter"
+import { COMBINER_ID_PREFIX } from "../../core/combiner"
 import { createConverter } from "../../renderer/converterRenderer"
+import { createCombiner } from "../../renderer/combinerRenderer"
 import type { PlaceableDefinition } from "./types"
 
 export const PLACEABLE_DEFINITIONS: PlaceableDefinition[] = [
@@ -12,6 +14,16 @@ export const PLACEABLE_DEFINITIONS: PlaceableDefinition[] = [
     clearance: 6,
     deletable: true,
     render: createConverter,
+  },
+  {
+    key: "2",
+    idPrefix: COMBINER_ID_PREFIX,
+    label: "+",
+    scale: 0.5,
+    minSize: 24,
+    clearance: 6,
+    deletable: true,
+    render: createCombiner,
   },
 ]
 

@@ -1,5 +1,7 @@
 import { Graphics, Point } from "pixi.js"
 import { CONNECTION_STYLE, DOUBLE_CLICK_MS } from "../../constants"
+import { isCombinerId } from "../../core/combiner"
+import { canAcceptCombinerIncoming } from "../../core/flowLabel"
 import { createDragStateMachine } from "../../core/interactionState"
 import type { BoxInfo, DragAction } from "../../core/interactionState"
 import type { GameModel } from "../../core/model"
@@ -93,6 +95,18 @@ export const createDragInteractions = ({
           break
         }
         case "connection-added": {
+          if (
+            isCombinerId(action.toId) &&
+            !canAcceptCombinerIncoming({
+              combinerId: action.toId,
+              fromId: action.fromId,
+              connections: model.getConnections(nodeManager.current.specId),
+              boxLabels: nodeManager.current.boxLabels,
+            })
+          ) {
+            clearLine()
+            break
+          }
           const added = model.addConnection(nodeManager.current.specId, {
             fromId: action.fromId,
             toId: action.toId,

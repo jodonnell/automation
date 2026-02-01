@@ -1,4 +1,5 @@
 import { isConverterId } from "./converter"
+import { isCombinerId } from "./combiner"
 import type {
   ConnectionPath,
   IncomingStub,
@@ -39,14 +40,15 @@ export const createGameModel = (): GameModel => {
 
   const addConnection = (specId: string, connection: ConnectionPath) => {
     const list = connections.get(specId) ?? []
-    if (
-      (isConverterId(connection.fromId) &&
-        list.some((item) => item.fromId === connection.fromId)) ||
+    const hasOutgoingLimit =
+      (isConverterId(connection.fromId) || isCombinerId(connection.fromId)) &&
+      list.some((item) => item.fromId === connection.fromId)
+    const hasIncomingLimit =
       (isConverterId(connection.toId) &&
-        list.some((item) => item.toId === connection.toId))
-    ) {
-      return false
-    }
+        list.some((item) => item.toId === connection.toId)) ||
+      (isCombinerId(connection.toId) &&
+        list.filter((item) => item.toId === connection.toId).length >= 2)
+    if (hasOutgoingLimit || hasIncomingLimit) return false
     list.push(connection)
     connections.set(specId, list)
     graphListeners.forEach((listener) => listener(specId))
