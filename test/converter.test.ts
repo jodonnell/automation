@@ -10,6 +10,7 @@ import { createNode } from "../src/renderer/nodeRenderer"
 import { createConverter } from "../src/renderer/converterRenderer"
 import { createPlaceableManager } from "../src/features/placeables/manager"
 import { createDragInteractions } from "../src/renderer/interactions/drag"
+import { renderConnections } from "../src/renderer/connectionRenderer"
 import type { NodeManager } from "../src/nodeManager"
 import type { NodeSpec } from "../src/core/types"
 
@@ -224,5 +225,93 @@ describe("placeable manager", () => {
       ),
     ).toBe(false)
     expect(model.getConnections(node.specId)).toHaveLength(0)
+  })
+})
+
+describe("converter connections", () => {
+  it("limits converters to one incoming and one outgoing connection", () => {
+    const model = createGameModel()
+    const specId = "root"
+    const converterId = "converter-0"
+
+    const firstIncoming = model.addConnection(specId, {
+      fromId: "root-A",
+      toId: converterId,
+      points: [
+        { x: 10, y: 10 },
+        { x: 20, y: 20 },
+      ],
+      incomingStub: { start: { x: 20, y: 20 }, end: { x: 30, y: 20 } },
+    })
+    const secondIncoming = model.addConnection(specId, {
+      fromId: "root-B",
+      toId: converterId,
+      points: [
+        { x: 30, y: 30 },
+        { x: 40, y: 40 },
+      ],
+      incomingStub: { start: { x: 40, y: 40 }, end: { x: 50, y: 40 } },
+    })
+    const firstOutgoing = model.addConnection(specId, {
+      fromId: converterId,
+      toId: "root-A",
+      points: [
+        { x: 50, y: 50 },
+        { x: 60, y: 60 },
+      ],
+      incomingStub: { start: { x: 60, y: 60 }, end: { x: 70, y: 60 } },
+    })
+    const secondOutgoing = model.addConnection(specId, {
+      fromId: converterId,
+      toId: "root-C",
+      points: [
+        { x: 70, y: 70 },
+        { x: 80, y: 80 },
+      ],
+      incomingStub: { start: { x: 80, y: 80 }, end: { x: 90, y: 80 } },
+    })
+
+    expect(firstIncoming).toBe(true)
+    expect(secondIncoming).toBe(false)
+    expect(firstOutgoing).toBe(true)
+    expect(secondOutgoing).toBe(false)
+    expect(model.getConnections(specId)).toHaveLength(2)
+  })
+})
+
+describe("converter flows", () => {
+  it("converts letters to numbers for outgoing connections", () => {
+    const node = buildNode()
+    const converter = createConverter(40, "1/a", "converter-0")
+    converter.position.set(200, 200)
+    node.addChild(converter)
+    node.boxLabels.set("converter-0", "1/a")
+
+    const connections = [
+      {
+        fromId: "root-A",
+        toId: "converter-0",
+        points: [
+          { x: 0, y: 0 },
+          { x: 10, y: 0 },
+        ],
+        incomingStub: { start: { x: 10, y: 0 }, end: { x: 15, y: 0 } },
+      },
+      {
+        fromId: "converter-0",
+        toId: "root-A",
+        points: [
+          { x: 0, y: 10 },
+          { x: 10, y: 10 },
+        ],
+        incomingStub: { start: { x: 10, y: 10 }, end: { x: 15, y: 10 } },
+      },
+    ]
+
+    renderConnections(node, connections, [])
+
+    const glyphs = node.flowLayer.children as Array<{ text: string }>
+    expect(glyphs[0].text).toBe("a")
+    expect(glyphs[1].text).toBe("1")
   })
 })

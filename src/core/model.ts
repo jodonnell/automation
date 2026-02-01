@@ -1,3 +1,4 @@
+import { isConverterId } from "./converter"
 import type {
   ConnectionPath,
   IncomingStub,
@@ -9,7 +10,7 @@ import { computeLayout } from "./layout"
 export type GameModel = {
   getLayout: (spec: NodeSpec, width: number, height: number) => NodeLayout
   getConnections: (specId: string) => ConnectionPath[]
-  addConnection: (specId: string, connection: ConnectionPath) => void
+  addConnection: (specId: string, connection: ConnectionPath) => boolean
   removeConnection: (specId: string, connection: ConnectionPath) => void
   removeConnectionsForBox: (specId: string, boxId: string) => void
   getIncomingStubs: (specId: string) => IncomingStub[]
@@ -38,9 +39,18 @@ export const createGameModel = (): GameModel => {
 
   const addConnection = (specId: string, connection: ConnectionPath) => {
     const list = connections.get(specId) ?? []
+    if (
+      (isConverterId(connection.fromId) &&
+        list.some((item) => item.fromId === connection.fromId)) ||
+      (isConverterId(connection.toId) &&
+        list.some((item) => item.toId === connection.toId))
+    ) {
+      return false
+    }
     list.push(connection)
     connections.set(specId, list)
     graphListeners.forEach((listener) => listener(specId))
+    return true
   }
 
   const removeConnection = (specId: string, connection: ConnectionPath) => {

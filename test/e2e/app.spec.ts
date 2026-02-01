@@ -3,9 +3,15 @@ import {
   dragBetween,
   getConnectionCount,
   getBoxCenters,
+  getBoxes,
+  getCanvasOrigin,
+  getFlowTextsNearConnection,
+  getNodeSize,
   getRenderCounts,
+  tickFlows,
   waitForCurrentSpec,
   waitForConnection,
+  waitForBoxWithPrefix,
   waitForGameReady,
 } from "./helpers"
 
@@ -63,4 +69,78 @@ test("zooming into a node clears connection rendering", async ({ page }) => {
   const renderedCounts = await getRenderCounts(page)
   expect(renderedCounts.connections).toBe(0)
   expect(renderedCounts.flows).toBe(0)
+})
+
+test("converter accepts one in/out and converts A to 1 for C", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 900, height: 700 })
+  await page.goto("/?debug=1")
+
+  const canvas = page.locator("canvas")
+  await expect(canvas).toHaveCount(1)
+
+  await waitForGameReady(page)
+
+  const boxes = await getBoxes(page)
+  const nodeSize = await getNodeSize(page)
+  const origin = await getCanvasOrigin(page)
+  const maxX = Math.max(...boxes.map((box) => box.x + box.size), 0)
+  const maxY = Math.max(...boxes.map((box) => box.y + box.size), 0)
+  const nodePoint = {
+    x: Math.min(nodeSize.width - 60, Math.max(60, maxX + 80)),
+    y: Math.min(nodeSize.height - 60, Math.max(60, maxY + 80)),
+  }
+  const screenPoint = {
+    x: origin.x + nodePoint.x,
+    y: origin.y + nodePoint.y,
+  }
+
+  await page.mouse.move(screenPoint.x, screenPoint.y)
+  await page.keyboard.press("1")
+  await waitForBoxWithPrefix(page, "converter-")
+
+  const centers = await getBoxCenters(page, ["root-A", "root-C", "root-T"])
+  const updatedBoxes = await getBoxes(page)
+  const converter = updatedBoxes.find((box) => box.id.startsWith("converter-"))
+  expect(converter).toBeTruthy()
+  const converterCenter = {
+    x: origin.x + (converter?.x ?? 0) + (converter?.size ?? 0) / 2,
+    y: origin.y + (converter?.y ?? 0) + (converter?.size ?? 0) / 2,
+  }
+
+  await dragBetween(page, centers["root-A"], converterCenter)
+  await waitForConnection(page)
+  await dragBetween(page, converterCenter, centers["root-C"])
+  await page.waitForFunction(() => {
+    const game = (
+      window as {
+        game?: {
+          nodeManager?: { current?: { specId?: string } }
+          model?: { getConnections?: (id: string) => unknown[] }
+        }
+      }
+    ).game
+    const specId = game?.nodeManager?.current?.specId ?? ""
+    const connections = game?.model?.getConnections?.(specId) ?? []
+    return connections.length === 2
+  })
+
+  await tickFlows(page)
+  const flowTexts = await getFlowTextsNearConnection(
+    page,
+    converter?.id ?? "",
+    "root-C",
+  )
+  expect(flowTexts.length).toBeGreaterThan(0)
+  expect(flowTexts).toContain("1")
+
+  const beforeCount = await getConnectionCount(page)
+  await dragBetween(page, centers["root-T"], converterCenter)
+  const afterIncoming = await getConnectionCount(page)
+  expect(afterIncoming).toBe(beforeCount)
+
+  await dragBetween(page, converterCenter, centers["root-A"])
+  const afterOutgoing = await getConnectionCount(page)
+  expect(afterOutgoing).toBe(beforeCount)
 })

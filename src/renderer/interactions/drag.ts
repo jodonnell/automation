@@ -93,14 +93,18 @@ export const createDragInteractions = ({
           break
         }
         case "connection-added": {
-          const line = ensureLine()
-          drawConnection(line, action.points)
-          model.addConnection(nodeManager.current.specId, {
+          const added = model.addConnection(nodeManager.current.specId, {
             fromId: action.fromId,
             toId: action.toId,
             points: action.points,
             incomingStub: action.incomingStub,
           })
+          if (!added) {
+            clearLine()
+            break
+          }
+          const line = ensureLine()
+          drawConnection(line, action.points)
           const targetBox = nodeManager.current.children.find((child) => {
             const candidate = child as BoxContainer
             return candidate.name === action.toId

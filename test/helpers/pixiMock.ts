@@ -81,6 +81,8 @@ export const createPixiMock = () => {
     lastCircle?: { x: number; y: number; radius: number }
     lastStroke?: unknown
     lastFill?: unknown
+    lastMove?: { x: number; y: number }
+    lastLineTo?: { x: number; y: number }[]
 
     rect(x: number, y: number, width: number, height: number): void {
       this.lastRect = { x, y, width, height }
@@ -88,6 +90,21 @@ export const createPixiMock = () => {
 
     circle(x: number, y: number, radius: number): void {
       this.lastCircle = { x, y, radius }
+    }
+
+    clear(): void {
+      this.lastMove = undefined
+      this.lastLineTo = undefined
+    }
+
+    moveTo(x: number, y: number): void {
+      this.lastMove = { x, y }
+      this.lastLineTo = []
+    }
+
+    lineTo(x: number, y: number): void {
+      if (!this.lastLineTo) this.lastLineTo = []
+      this.lastLineTo.push({ x, y })
     }
 
     stroke(style: unknown): void {

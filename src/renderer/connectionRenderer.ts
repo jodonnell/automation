@@ -5,6 +5,7 @@ import {
   FLOW_SPACING_PX,
   FLOW_TEXT_STYLE,
 } from "../constants"
+import { convertLabel, isConverterId } from "../core/converter"
 import { drawSmoothPath, smoothPath } from "./path"
 import type { ConnectionPath, IncomingStub } from "../core/types"
 import type { NodeContainer } from "./types"
@@ -56,6 +57,28 @@ const getPointAtDistance = (path: PathSample, distance: number) => {
   }
 }
 
+const resolveFlowLabel = (
+  boxId: string,
+  boxLabels: Map<string, string>,
+  connections: ConnectionPath[],
+  visited = new Set<string>(),
+) => {
+  const directLabel = boxLabels.get(boxId)
+  if (!isConverterId(boxId)) return directLabel
+  if (visited.has(boxId)) return directLabel
+  visited.add(boxId)
+  const incoming = connections.find((connection) => connection.toId === boxId)
+  if (!incoming) return directLabel
+  const upstream = resolveFlowLabel(
+    incoming.fromId,
+    boxLabels,
+    connections,
+    visited,
+  )
+  if (!upstream) return directLabel
+  return convertLabel(upstream)
+}
+
 export const renderConnections = (
   node: NodeContainer,
   connections: ConnectionPath[],
@@ -89,7 +112,11 @@ export const renderConnections = (
     }
     node.connectionLayer.addChild(line)
 
-    const label = node.boxLabels.get(connection.fromId)
+    const label = resolveFlowLabel(
+      connection.fromId,
+      node.boxLabels,
+      connections,
+    )
     if (!label) return
     const path = buildPathSample(connection.points)
     if (path.length <= 1) return
