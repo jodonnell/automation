@@ -1,8 +1,9 @@
 # System Overview (Agent-Focused)
 
 This repo is a Vite + TypeScript Pixi.js app that renders a nested “node graph” UI.
-Users connect labeled boxes with drawn paths, zoom into child nodes, and place small
-utility nodes (converter/combiner). This file explains the concepts and architecture
+Users connect labeled boxes (called **resource nodes**) with drawn paths, zoom into
+child nodes, and place small utility nodes (converter/combiner). This file explains
+the concepts and architecture
 so you can reason about behavior quickly.
 
 ## Core Concepts
@@ -12,8 +13,10 @@ so you can reason about behavior quickly.
   “board” that can be zoomed into by double‑clicking a box with children.
 - **NodeContainer:** A runtime Pixi `Container` that renders one NodeSpec level.
   It contains boxes (child specs), connection lines, flow labels, and incoming stubs.
-- **Boxes:** Square, labeled containers rendered by `src/renderer/nodeRenderer.ts`.
-  Each box corresponds to a child NodeSpec or a dynamically placed node.
+- **Resource nodes (boxes):** Square, labeled containers rendered by
+  `src/renderer/nodeRenderer.ts`. Each resource node corresponds to a child
+  NodeSpec or a dynamically placed node. These are the labeled boxes you can
+  “mine” a letter/label from.
 - **Connections (edges):** Paths drawn between boxes. Each connection stores
   `fromId`, `toId`, and an array of points in `src/core/types.ts`.
 - **Incoming stubs:** Short line segments that represent “incoming” sources from
@@ -22,6 +25,10 @@ so you can reason about behavior quickly.
   by `src/core/flowLabel.ts` (with combiner/converter rules).
 - **Placeables:** Small nodes (converter/combiner) you can spawn via keyboard
   (`1` or `2`) at the pointer, defined in `src/features/placeables/definitions.ts`.
+  - **Converter:** Transforms a single incoming label between letter and number
+    (A↔1, B↔2, etc.) via `src/core/converter.ts`.
+  - **Combiner:** Accepts up to two inputs of the same type; numbers sum and text
+    concatenates, defined in `src/core/flowLabel.ts`.
 
 ## Architecture (High Level)
 
@@ -45,7 +52,7 @@ so you can reason about behavior quickly.
      `spec.id` and viewport size.
 
 4) **Rendering layer**
-   - `src/renderer/nodeRenderer.ts` builds the node container and its boxes.
+   - `src/renderer/nodeRenderer.ts` builds the node container and its resource nodes.
    - `src/renderer/connectionRenderer.ts` draws smoothed paths, incoming stubs,
      and animates flow labels along those paths.
    - `src/renderer/path.ts` (not detailed here) shapes curves for connections.
@@ -85,7 +92,7 @@ so you can reason about behavior quickly.
 - **connectionLayer:** drawn paths for edges.
 - **flowLayer:** animated text (labels) along edges.
 - **incomingLayer:** drawn incoming stubs (short segments).
-- **box children:** square boxes for node items or placeables.
+- **box children:** square resource nodes for node items or placeables.
 
 ## Key Files by Responsibility
 
