@@ -182,7 +182,7 @@ test("incoming stubs can extend into a converter inside zoomed context", async (
   expect(flowTexts).toContain("a")
 })
 
-test("converter accepts one in/out and converts A to 1 for C", async ({
+test("converter only allows connections originating from A", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 900, height: 700 })
@@ -222,31 +222,11 @@ test("converter accepts one in/out and converts A to 1 for C", async ({
 
   await dragBetween(page, centers["root-A"], converterCenter)
   await waitForConnection(page)
-  await dragBetween(page, converterCenter, centers["root-C"])
-  await page.waitForFunction(() => {
-    const game = (
-      window as {
-        game?: {
-          nodeManager?: { current?: { specId?: string } }
-          model?: { getConnections?: (id: string) => unknown[] }
-        }
-      }
-    ).game
-    const specId = game?.nodeManager?.current?.specId ?? ""
-    const connections = game?.model?.getConnections?.(specId) ?? []
-    return connections.length === 2
-  })
-
-  await tickFlows(page)
-  const flowTexts = await getFlowTextsNearConnection(
-    page,
-    converter?.id ?? "",
-    "root-C",
-  )
-  expect(flowTexts.length).toBeGreaterThan(0)
-  expect(flowTexts).toContain("1")
-
   const beforeCount = await getConnectionCount(page)
+  await dragBetween(page, converterCenter, centers["root-C"])
+  const afterOutput = await getConnectionCount(page)
+  expect(afterOutput).toBe(beforeCount)
+
   await dragBetween(page, centers["root-T"], converterCenter)
   const afterIncoming = await getConnectionCount(page)
   expect(afterIncoming).toBe(beforeCount)
@@ -256,7 +236,9 @@ test("converter accepts one in/out and converts A to 1 for C", async ({
   expect(afterOutgoing).toBe(beforeCount)
 })
 
-test("combiner combines two letter inputs in order", async ({ page }) => {
+test("combiner only accepts connections originating from A", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 900, height: 700 })
   await page.goto("/?debug=1")
 
@@ -293,30 +275,13 @@ test("combiner combines two letter inputs in order", async ({ page }) => {
   }
 
   await dragBetween(page, centers["root-C"], combinerCenter)
-  await waitForConnection(page)
+  let connectionCount = await getConnectionCount(page)
+  expect(connectionCount).toBe(0)
   await dragBetween(page, centers["root-A"], combinerCenter)
   await waitForConnection(page)
+  connectionCount = await getConnectionCount(page)
+  expect(connectionCount).toBe(1)
   await dragBetween(page, combinerCenter, centers["root-T"])
-  await page.waitForFunction(() => {
-    const game = (
-      window as {
-        game?: {
-          nodeManager?: { current?: { specId?: string } }
-          model?: { getConnections?: (id: string) => unknown[] }
-        }
-      }
-    ).game
-    const specId = game?.nodeManager?.current?.specId ?? ""
-    const connections = game?.model?.getConnections?.(specId) ?? []
-    return connections.length === 3
-  })
-
-  await tickFlows(page)
-  const flowTexts = await getFlowTextsNearConnection(
-    page,
-    combiner?.id ?? "",
-    "root-T",
-  )
-  expect(flowTexts.length).toBeGreaterThan(0)
-  expect(flowTexts).toContain("ca")
+  const afterOutput = await getConnectionCount(page)
+  expect(afterOutput).toBe(1)
 })

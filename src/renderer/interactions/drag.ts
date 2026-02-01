@@ -67,12 +67,15 @@ export const createDragInteractions = ({
 
   const getBoxInfo = (box: BoxContainer): BoxInfo => {
     const spec = resolveSpecForBox(box)
+    const id = box.name ?? ""
+    const label = nodeManager.current.boxLabels.get(id) ?? ""
     return {
-      id: box.name ?? "",
+      id,
       x: box.position.x,
       y: box.position.y,
       size: box.boxSize,
       hasChildren: Boolean(spec?.children && spec.children.length > 0),
+      canStartConnection: label === "A",
     }
   }
 
@@ -224,7 +227,7 @@ export const createDragInteractions = ({
         if (button !== 0 || cameraController.isTweening) return
         clearDrag()
         const localPoint = getLocalPointFromEvent(event)
-    applyActions(state.startDrag(getBoxInfo(box), localPoint))
+        applyActions(state.startDrag(getBoxInfo(box), localPoint))
       })
     })
   }
@@ -260,7 +263,10 @@ export const createDragInteractions = ({
       localPoint,
       getBoxList(nodeManager.current),
       now,
-      { width: nodeManager.current.nodeWidth, height: nodeManager.current.nodeHeight },
+      {
+        width: nodeManager.current.nodeWidth,
+        height: nodeManager.current.nodeHeight,
+      },
     )
     applyActions(actions)
   }

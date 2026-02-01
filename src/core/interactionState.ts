@@ -6,6 +6,7 @@ export type BoxInfo = {
   y: number
   size: number
   hasChildren: boolean
+  canStartConnection: boolean
 }
 
 export type DragAction =
@@ -43,6 +44,7 @@ export type DragStateMachine = {
 type BoxDragState = {
   type: "box"
   startBox: BoxInfo
+  allowConnection: boolean
   moved: boolean
   startLocal: PointData
   points: PointData[]
@@ -168,6 +170,7 @@ export const createDragStateMachine = (params?: {
     dragState = {
       type: "box",
       startBox: box,
+      allowConnection: box.canStartConnection,
       moved: false,
       startLocal: point,
       points: [],
@@ -224,6 +227,14 @@ export const createDragStateMachine = (params?: {
       const pointsToDraw = [dragState.startAnchor, ...drawPoints]
       dragState.lineActive = true
       actions.push({ type: "drag-draw", points: pointsToDraw })
+      return actions
+    }
+
+    if (!dragState.allowConnection) {
+      if (dragState.lineActive) {
+        actions.push({ type: "drag-clear" })
+        dragState.lineActive = false
+      }
       return actions
     }
 
@@ -306,8 +317,10 @@ export const createDragStateMachine = (params?: {
       return actions
     }
 
-    const targetBox = getBoxAtPoint(point, boxes)
-    const droppedOnOther = targetBox && targetBox.id !== state.startBox.id
+    const canConnect = state.allowConnection
+    const targetBox = canConnect ? getBoxAtPoint(point, boxes) : null
+    const droppedOnOther =
+      canConnect && targetBox && targetBox.id !== state.startBox.id
     const moved = (state.moved && state.lineActive) || Boolean(droppedOnOther)
     const startAnchor =
       state.startAnchor ?? getBoxEdgePoint(state.startBox, point)
