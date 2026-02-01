@@ -123,7 +123,10 @@ export const renderConnections = (
   incoming.forEach((stub) => {
     const line = new Graphics()
     drawSmoothPath(line, [stub.start, stub.end], CONNECTION_STYLE)
-    if (onIncomingStubPointerDown) {
+    const hasOutgoing = connections.some(
+      (connection) => connection.fromId === stub.id,
+    )
+    if (onIncomingStubPointerDown && !hasOutgoing) {
       const minX = Math.min(stub.start.x, stub.end.x)
       const minY = Math.min(stub.start.y, stub.end.y)
       const width = Math.abs(stub.end.x - stub.start.x)
@@ -148,6 +151,9 @@ export const renderConnections = (
         stoppable.preventDefault?.()
         onIncomingStubPointerDown(stub, event)
       })
+    } else {
+      line.eventMode = "none"
+      line.cursor = "default"
     }
     node.incomingLayer.addChild(line)
 

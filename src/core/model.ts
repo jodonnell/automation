@@ -108,12 +108,30 @@ export const createGameModel = (): GameModel => {
     if (!list) return
     const next = list.filter((item) => item !== stub)
     if (next.length === list.length) return
+    const changed = true
     if (next.length > 0) {
       incomingStubs.set(specId, next)
     } else {
       incomingStubs.delete(specId)
     }
-    graphListeners.forEach((listener) => listener(specId))
+
+    const currentConnections = connections.get(specId)
+    if (currentConnections) {
+      const remaining = currentConnections.filter(
+        (connection) => connection.fromId !== stub.id,
+      )
+      if (remaining.length !== currentConnections.length) {
+        if (remaining.length > 0) {
+          connections.set(specId, remaining)
+        } else {
+          connections.delete(specId)
+        }
+      }
+    }
+
+    if (changed) {
+      graphListeners.forEach((listener) => listener(specId))
+    }
   }
 
   const removeConnectionWithStub = (

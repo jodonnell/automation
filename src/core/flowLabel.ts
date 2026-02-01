@@ -1,5 +1,6 @@
 import { COMBINER_ID_PREFIX } from "./combiner"
 import { convertLabel, CONVERTER_ID_PREFIX } from "./converter"
+import { INCOMING_STUB_PREFIX } from "../constants"
 import type { ConnectionPath } from "./types"
 
 export type LabelType = "number" | "text" | null
@@ -56,6 +57,10 @@ export const combineLabels = (labels: string[]): string | null => {
 }
 
 export const PLACEABLE_BEHAVIORS: PlaceableBehavior[] = [
+  {
+    idPrefix: INCOMING_STUB_PREFIX,
+    maxOutgoing: 1,
+  },
   {
     idPrefix: CONVERTER_ID_PREFIX,
     maxIncoming: 1,
