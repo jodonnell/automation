@@ -50,6 +50,26 @@ test("connects A to C and renders a connection line", async ({ page }) => {
   expect(renderedCounts.flows).toBeGreaterThan(0)
 })
 
+test("resource nodes only allow connections from A", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 700 })
+  await page.goto("/?debug=1")
+
+  const canvas = page.locator("canvas")
+  await expect(canvas).toHaveCount(1)
+
+  await waitForGameReady(page)
+
+  const centers = await getBoxCenters(page, ["root-A", "root-C"])
+  await dragBetween(page, centers["root-A"], centers["root-C"])
+  await waitForConnection(page)
+  const afterAtoC = await getConnectionCount(page)
+  expect(afterAtoC).toBe(1)
+
+  await dragBetween(page, centers["root-C"], centers["root-A"])
+  const afterCtoA = await getConnectionCount(page)
+  expect(afterCtoA).toBe(afterAtoC)
+})
+
 test("zooming into a node clears connection rendering", async ({ page }) => {
   await page.setViewportSize({ width: 900, height: 700 })
   await page.goto("/?debug=1")
