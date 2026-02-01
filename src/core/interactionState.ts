@@ -141,7 +141,7 @@ const buildIncomingStub = (
     x: (localX / box.size) * viewWidth,
     y: (localY / box.size) * viewHeight,
   }
-  const stubLength = Math.min(viewWidth, viewHeight) * 0.12
+  const stubLength = Math.min(viewWidth, viewHeight) * 0.06
   return {
     start,
     end: {
